@@ -47,3 +47,16 @@ dependencies {
 
 
 }
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.bharatKumawatds"
+            artifactId = "screenShare"
+            version = "0.0.1"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
