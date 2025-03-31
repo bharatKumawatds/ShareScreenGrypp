@@ -1,58 +1,54 @@
 package com.app.screensharinggrypp
 
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.activity.enableEdgeToEdge
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.app.screenshare.ShareScreen
-
+import com.app.screenshare.sharingMain.ScreenShareComponent
 
 
 class MainActivity : AppCompatActivity() {
-    var main_content:ConstraintLayout ?= null
-    var shareScreen: ShareScreen?= null
-    var webViewContainer:WebView ?= null
+    companion object {
+        const val TAG = "MainActivity"
+    }
+
+
+    private lateinit var shareScreenButton: Button
+    private var screenShareComponent: ScreenShareComponent? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        shareScreenButton = findViewById(R.id.sharescreen_button)
+
+
+        screenShareComponent = ScreenShareComponent(this, lifecycle)
+
+
+        shareScreenButton.setOnClickListener {
+            if(shareScreenButton.text == "Start Screenshare"){
+
+                screenShareComponent?.startScreenShare()
+                shareScreenButton.text = "Stop Screenshare"
+            }else{
+                shareScreenButton.text = "Start Screenshare"
+                screenShareComponent?.stopScreenShare()
+
+            }
+
         }
-        main_content = findViewById(R.id.main)
-        webViewContainer = findViewById(R.id.webView)
-
-        webViewContainer!!.setWebViewClient(WebViewClient())
-        val webSettings: WebSettings = webViewContainer!!.getSettings()
-        webSettings.javaScriptEnabled = true
-        webViewContainer!!.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-        webViewContainer!!.loadUrl("https://www.tokbox.com")
-        shareScreen = ShareScreen.Builder()
-            .activity(this@MainActivity)
-            .context(this)
-            .contentView(main_content!!)
-            .build()
-        shareScreen!!.initializeShareScreen()
-
     }
 
-    override fun onResume() {
-        super.onResume()
-        shareScreen!!.connectSession()
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        screenShareComponent?.handlePermissionResult(requestCode, permissions, grantResults)
     }
 
-    override fun onPause() {
-        super.onPause()
-        shareScreen!!.disconnectSession()
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        screenShareComponent?.handleActivityResult(requestCode, resultCode, data)
     }
 }
