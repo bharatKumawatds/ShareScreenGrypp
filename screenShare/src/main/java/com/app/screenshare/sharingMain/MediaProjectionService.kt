@@ -1,6 +1,10 @@
 package com.app.screenshare.sharingMain
 
-import android.app.*
+import android.app.Activity
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -10,12 +14,15 @@ import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
-import android.os.*
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.os.Process
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import com.app.screenshare.R
-
 import java.nio.ByteBuffer
 
 class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
@@ -247,5 +254,18 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
                 .setPriority(Notification.PRIORITY_DEFAULT)
                 .build()
         }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.e("here Check","Task Removed")
+        binder?.mediaProjectionHandler?.deleteService()
+        val pid = Process.myPid()
+        Process.killProcess(pid)
+        super.onTaskRemoved(rootIntent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
     }
 }

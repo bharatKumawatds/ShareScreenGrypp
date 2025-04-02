@@ -1,18 +1,19 @@
 package com.app.screenshare.service
 
 
-import com.app.screenshare.model.BaseResponse
-import com.app.screenshare.model.request.CreateSessionRequest
+import com.app.screenshare.model.response.CreateSessionResponse
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Header
 
 import retrofit2.http.POST
 
 
-/**
- * Created by Nsikak  Thompson on 3/11/2017.
- */
 interface RestApiService {
-    @POST("/createSession")
-    fun createSession(@Body createSessionRequest: CreateSessionRequest): Call<BaseResponse<Any>>
+
+
+    @POST("create-session")
+    suspend fun createSession(@Header("APIKey") apiKey:String): Response<Any>
+
 }

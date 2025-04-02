@@ -24,17 +24,15 @@ class MainActivity : AppCompatActivity() {
         shareScreenButton = findViewById(R.id.sharescreen_button)
 
 
-        screenShareComponent = ScreenShareComponent(this, lifecycle)
-
-
+        MainApplication.getScreenShareComponent().attachActivity(this)
         shareScreenButton.setOnClickListener {
             if(shareScreenButton.text == "Start Screenshare"){
 
-                screenShareComponent?.startScreenShare()
+                MainApplication.getScreenShareComponent().startScreenShare()
                 shareScreenButton.text = "Stop Screenshare"
             }else{
                 shareScreenButton.text = "Start Screenshare"
-                screenShareComponent?.stopScreenShare()
+                MainApplication.getScreenShareComponent().stopScreenShare()
 
             }
 
@@ -44,11 +42,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        screenShareComponent?.handlePermissionResult(requestCode, permissions, grantResults)
+        MainApplication.getScreenShareComponent().handlePermissionResult(requestCode, permissions, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        screenShareComponent?.handleActivityResult(requestCode, resultCode, data)
+        MainApplication.getScreenShareComponent().handleActivityResult(requestCode, resultCode, data)
     }
 }
