@@ -14,7 +14,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import com.app.screenshare.model.response.CreateSessionResponse
 import com.app.screenshare.service.RestApiBuilder
+import com.app.screenshare.util.SessionCodeDialog
+import com.app.screenshare.util.Utils
+import com.google.gson.Gson
 import com.opentok.android.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +33,7 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
     var context:Context ?= null
     var context_actvity:Context ?= null
     var lifecycle:Lifecycle ?= null
+    var session_dialog:SessionCodeDialog ?= null
 
     constructor(context: Context,lifecycle1: Lifecycle) : this() {
         Log.e("Calling","Constructor")
@@ -41,10 +46,11 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
         const val RC_VIDEO_APP_PERM = 124
         const val RC_SCREEN_CAPTURE = 125
         var isCurrentAppIsVisible = false
+        var matched_session_code = ""
 
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID = "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
-        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzZTEucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoxNDc2NjA0NDE0NDk0MTg0MTMyNDI4OTM3NDYwNDk2NTY4MTg5NjEiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c2UxLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzL2MyMDI1OTA4NTZjNjg5ZDM0ZmIyZmQzODhmMDNhZTM5In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDJUMDU6MzA6MDUuMTQ5ODk1MzI4WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0MzU3MjE2MywianRpIjoiMDI2MjM4OWMtN2Y0MS00NDIyLTlkNzMtNTc0ZjY4Y2U3YWE3IiwiaWF0IjoxNzQzNTcxODYzLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0MzU3MTg0OCwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MTYzODYzLCJqdGkiOiI5NDRlODAxYS0zMDdiLTQ1YjctYjk2Ni05YWVlODI4MGY0MTgiLCJpYXQiOjE3NDM1NzE4NjMsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNTcxODQ4LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.uUhz0UqMIg45xKx2FGIBudFpniZh-RoYrVh5njT1rU8HwF6lR7KP35a74wQ01FcBlnlzFzBr4O-KM8VV5P8EBCh_1dTbeavT5RwXCRpqz0Q8zsk9UDc0pigtbIFvBmJagS1Z0JFxPgccv-cwBdlq8JUTaXolVqNJeOP51c4yoTQZxL9Kut7ehnzaQtI7rkIOSpXKjer5W3eBqeIehwfDHkhMehFh93bMQvmv2vF7Yz7EzH6X0-8_eVlr-LmGs3DpWjJUQ00_tQw9tayoV_3aLT3ZA8wa0cC0I2CtOTRcGff4leKu0FnL0PPZQqi4qttMQGhPdxn0Xmoa-jr7hA8AMg"
+        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzZTEucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoxNDc2NjA0NDE0NDk0MTg0MTMyNDI4OTM3NDYwNDk2NTY4MTg5NjEiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c2UxLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzL2MyMDI1OTA4NTZjNjg5ZDM0ZmIyZmQzODhmMDNhZTM5In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDJUMTM6NDk6MzcuODkxNzQwNDI4WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0MzY3NTQ1OSwianRpIjoiN2ZkNTk5ZDAtOWQ0NC00MzI2LWIyYTYtYjhmYjkyNzg5OGQ3IiwiaWF0IjoxNzQzNjc1MTU5LCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0MzY3NTE0NCwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MjY3MTcxLCJqdGkiOiJmZWVkM2IzYi0xNDAxLTQxZTQtOWU0Zi01MTZhOWY0OWIzYTAiLCJpYXQiOjE3NDM2NzUxNzEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNjc1MTU2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.HxkIfVe2F1OY5jk6cTacaIe8p_AxGlUgGZPG2YnbOq_uqHF-6CPxHpyZ-EeQ0lD-lBRmxSfDngxqUzTDWZLaM0U8YyefgP0WPxqPbBNxrnHvgjBJQUNnW_fygSJqJiIcU-J7q8eQXsBODEt2DJ4HS3iyzNkqs03x7YADSsdEZKhJH63kyc12RKciyBklGydPiJHDUVfJIk07HYc9aEEff6h5N6aOCCFUKdMiWihi02wdMNCmixLDbapi1muftN3pvVrn04WwaEZtIaMpUGhYrwkOXMUnNmttkZ_C_aYHU6U8NNzkmywALocAx8C40a9C8QQCjNkjuZ9EdgIGHYpn_w"
     }
 
 
@@ -138,9 +144,6 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
             Handler().postDelayed({
                 Log.e("here Checking", isCurrentAppIsVisible.toString())
                 if(isCurrentAppIsVisible){
-                    session = Session.Builder(context, API_KEY, SESSION_ID).build()
-                    session?.setSessionListener(sessionListener)
-                    session?.connect(TOKEN)
 
                     Handler().postDelayed({
                         pd?.hide()
@@ -161,7 +164,7 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
     private fun initializeComponent() {
 
 
-        pd?.setMessage("loading")
+        pd?.setMessage("Please Wait...")
         pd?.show()
         val apiService = RestApiBuilder().service
         CoroutineScope(Dispatchers.IO).launch {
@@ -173,6 +176,12 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
                     // Update UI on the main thread
                     withContext(Dispatchers.Main) {
                         pd?.hide()
+                        session = Session.Builder(context, API_KEY, SESSION_ID).build()
+                        session?.setSessionListener(sessionListener)
+                        session?.setSignalListener(signalListener)
+                        session?.connect(TOKEN)
+                        matched_session_code = response.body()?.sessionCode?:""
+                        showGlassDialog(response.body()?.sessionCode?:"")
                         Log.e("this@MainActivity", "Data: $data")
                     }
                 } else {
@@ -189,13 +198,14 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
                 }
             }
         }
-        Handler().postDelayed({
-            if (publisherScreen == null) {
+
+
+    }
+    fun startPublishScreen(){
+        if (publisherScreen == null) {
                 Log.d(TAG, "Initiate Screenshare")
                 requestScreenCapture()
             }
-        },1200)
-
     }
 
     fun startScreenShare(){
@@ -232,7 +242,29 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
 
             Log.d(TAG, "Publishing Screen")
             session?.publish(publisherScreen)
+            session?.sendSignal("ScreenDetails","{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${Utils.getScreenWidth()},height: ${Utils.getScreenHeight()}}")
         }
+    }
+    private fun showGlassDialog(sessionCode: String) {
+        if(context_actvity != null && sessionCode != ""){
+            session_dialog = SessionCodeDialog(
+                context = context_actvity!!,
+                title = sessionCode,
+                message = "Please Share the code to executive",
+                cancelText = "Cancel",
+                confirmText = "Yes",
+                onConfirmClick = {
+                    println("Confirmed")
+                },
+                onCancelClick = {
+                    println("Cancelled")
+                }
+            )
+
+
+            session_dialog?.show()
+        }
+
     }
 
     private fun unpublishScreen() {
@@ -282,6 +314,19 @@ class ScreenShareComponent() : MediaProjectionHandler,DefaultLifecycleObserver {
 
         override fun onError(p0: Session?, p1: OpentokError?) {
             Log.e(TAG, "Session Error: ${p1?.message ?: "null error message"}")
+        }
+    }
+    var signalListener = object :Session.SignalListener{
+        override fun onSignalReceived(p0: Session?, p1: String?, p2: String?, p3: Connection?) {
+            if(p1 == "CodeRequested"){
+                if(p2 == matched_session_code){
+                    session_dialog?.dismiss()
+                    startPublishScreen()
+                }
+
+            }
+            Log.e("here",p1.toString())
+            Log.e("here",p2.toString())
         }
     }
     var publisherListener = object:PublisherKit.PublisherListener {

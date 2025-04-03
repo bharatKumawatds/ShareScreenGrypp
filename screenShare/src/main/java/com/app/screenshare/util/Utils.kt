@@ -2,6 +2,7 @@ package com.app.screenshare.util
 
 import android.app.*
 import android.content.*
+import android.content.res.Resources
 import android.graphics.*
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -38,6 +39,14 @@ object Utils {
 
         }
         return osName
+    }
+
+    fun getScreenWidth(): Int {
+        return Resources.getSystem().getDisplayMetrics().widthPixels
+    }
+
+    fun getScreenHeight(): Int {
+        return Resources.getSystem().getDisplayMetrics().heightPixels
     }
 
     /*Get Device Name */

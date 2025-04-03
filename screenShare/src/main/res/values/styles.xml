@@ -2,5 +2,9 @@
 <resources>
 
     <style name="Permissions.TransparentTheme" parent="android:Theme.Light" />
+    <style name="DialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/fade_in</item>
+        <item name="android:windowExitAnimation">@anim/fade_out</item>
+    </style>
 
 </resources>

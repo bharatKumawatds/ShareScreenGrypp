@@ -14,6 +14,6 @@ interface RestApiService {
 
 
     @POST("create-session")
-    suspend fun createSession(@Header("APIKey") apiKey:String): Response<Any>
+    suspend fun createSession(@Header("APIKey") apiKey:String): Response<CreateSessionResponse>
 
 }
