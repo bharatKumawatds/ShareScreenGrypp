@@ -20,12 +20,16 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import com.app.screenshare.model.response.CodeRequestedResponse
 import com.app.screenshare.model.response.CreateSessionResponse
 import com.app.screenshare.service.RestApiBuilder
+import com.app.screenshare.util.ProgressAlertDialog
+
 import com.app.screenshare.util.SessionCodeDialog
 import com.app.screenshare.util.Utils
 import com.google.gson.Gson
@@ -80,14 +84,14 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID = "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
-        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzZTEucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoxNDc2NjA0NDE0NDk0MTg0MTMyNDI4OTM3NDYwNDk2NTY4MTg5NjEiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c2UxLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzL2MyMDI1OTA4NTZjNjg5ZDM0ZmIyZmQzODhmMDNhZTM5In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDJUMTM6NDk6MzcuODkxNzQwNDI4WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0MzY4ODE0NiwianRpIjoiNjk2ZDZkMDctNmEwZi00ZTQ5LWE4OTctZWU3ZGEyNzE2NWU5IiwiaWF0IjoxNzQzNjg3ODQ2LCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0MzY4NzgzMSwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2Mjc5ODQ3LCJqdGkiOiI0Y2FhN2FmZi02MzIyLTQzN2QtYWYzMi1hOGRjNDA4Y2Y1ZDkiLCJpYXQiOjE3NDM2ODc4NDcsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNjg3ODMyLCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.RvKrzGeol1tQ6Nl4nDQuH6Q3wqClpow73xXCEAjJbHh5sA1uR5Zft6zpR2Ylt-3wqU3gLAbR2i7Ms42mbFpyiEmqpibHWqlA4hqpOd65BsJxQhv9174r0w9nyDLOfBzC0vFxUOA-_nnhQMq5_Qp075egoTXc3X8JO3Xvm_DaoEiA-E60q1q-vIQbAo6dkk5Jl1xNPlngRVg5R_LlGBF0VaIWVEm-d1dEkY_ONG3pUVD3aGi-OzzsCxU9VExFtZmqbqjdUuWTYmehqBemuAsk9pMU5mCbjJOvSU0TBw5y3jOP_uABbl-mAIjigjlzVnLUMp7Q_CdX6XrByv0Iz5proA"
+        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDRUMDY6Mjg6MjcuNDAzNDU5OTM3WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0Mzc1OTc1MSwianRpIjoiMjU4ZGQyMmEtOWZjZC00OTAzLWExYjItMTY0MzllY2I2MThiIiwiaWF0IjoxNzQzNzU5NDUxLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0Mzc1OTQzNiwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MzUxNDUxLCJqdGkiOiJkOGZhOTc0Yi0xMGZmLTQ1ZmUtOTkyMy05MDBkYTg2NjE1NjEiLCJpYXQiOjE3NDM3NTk0NTEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNzU5NDM2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.hgJi87EKpI_V-bS4G6r2Tuc_YwesqEMJpbiOxT7d8gmA7_UUjRWsGPvpyR_xcyeyPn81oVItD3zLZEM9sBG19MaT8Nl6WV4FMvgJDkwy40yRWPDuPvo8TCat132EmSeZ0Ar8lb7hVOLP9Z0rP0ksQkpQU8KcuUzXj8QY6tJMhDVG8s3VoCqQbCYgJIuHvNYU5Pm9Zq7P973QcfKuhmYCfJ4kyVH_WdEs3ysNTJieUseAej0ceR3BqkzQsWHWhpVj8EjIpe26JZFaEeSrtb2gOpaNGOS4_vOjlc_02kZk-Yw3kzLxgcLc3bXz3Sw5Zc22ih6GZtGWPyEyrP8OB0zb_g"
     }
 
     private var publisherScreen: Publisher? = null
     private var customVideoCapturer: CustomVideoCapturer? = null
     private var mediaProjectionServiceIsBound: Boolean = false
     private var mediaProjectionBinder: MediaProjectionBinder? = null
-    var pd: ProgressDialog? = null
+    var pd: ProgressAlertDialog? = null
 
     private val connection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -154,14 +158,12 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 Handler().postDelayed({
                     Log.e("here Checking", isCurrentAppIsVisible.toString())
                     if (isCurrentAppIsVisible) {
-                        Handler().postDelayed({
                             pd?.hide()
                             val intent = Intent(context, MediaProjectionService::class.java)
                             intent.putExtra("resultCode", resultCode)
                             intent.putExtra("data", data)
                             context?.startService(intent)
                             context?.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-                        }, 4000)
                     }
                 }, 100)
             }
@@ -223,7 +225,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
     fun attachActivity(context: Context) {
         this.context_actvity = context
-        pd = ProgressDialog(context_actvity)
+        pd = ProgressAlertDialog(context_actvity!!)
     }
 
     fun handlePermissionResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -241,36 +243,54 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             pd?.show()
             val apiService = RestApiBuilder().service
             CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val response = apiService.createSession(" grypp_live_xK2P9M7a1LqVb3Wz6JtD4RfXyE8Nc0Q5")
-                    if (response.isSuccessful) {
-                        val data = response.body()
-                        withContext(Dispatchers.Main) {
-                            pd?.hide()
-                            session = Session.Builder(context, API_KEY, SESSION_ID).build()
-                            session?.setSessionListener(sessionListener)
-                            session?.setSignalListener(signalListener)
-                            session?.connect(TOKEN)
-                            matched_session_code = response.body()?.sessionCode ?: ""
-                            showGlassDialog(response.body()?.sessionCode ?: "")
-                            Log.e("this@MainActivity", "Data: $data")
+                if(Utils.isNetworkOnline1(context)){
+
+                    try {
+                        val response = apiService.createSession(" grypp_live_xK2P9M7a1LqVb3Wz6JtD4RfXyE8Nc0Q5")
+                        if (response.isSuccessful) {
+                            val data = response.body()
+                            withContext(Dispatchers.Main) {
+                                pd?.hide()
+                                //session = Session.Builder(context, API_KEY, SESSION_ID).build()
+                                session = Session.Builder(context, response.body()?.apiKey, response.body()?.sessionId).build()
+                                session?.setSessionListener(sessionListener)
+                                session?.setSignalListener(signalListener)
+                                session?.connect(response.body()?.customerToken)
+                                //session?.connect(TOKEN)
+                                pd?.show()
+                                matched_session_code = response.body()?.sessionCode ?: ""
+
+                                Log.e("this@MainActivity", "Data: $data")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                pd?.hide()
+                                Log.e("this@MainActivity", "WErorr: ${response.code()}")
+                                showToast("WErorr: ${response.code()}")
+                            }
                         }
-                    } else {
+                    } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
                             pd?.hide()
-                            Log.e("this@MainActivity", "WErorr: ${response.code()}")
+                            Log.e("this@MainActivity", "Error: $e")
+                            showToast("Error: $e")
                         }
                     }
-                } catch (e: Exception) {
+                }else{
                     withContext(Dispatchers.Main) {
                         pd?.hide()
-                        Log.e("this@MainActivity", "Error: $e")
+                        showToast("No Internet Connection")
                     }
                 }
+
             }
         }
     }
 
+    fun showToast(message: String) {
+        if (context_actvity == null) return
+        Toast.makeText(context_actvity, message, Toast.LENGTH_SHORT).show()
+    }
     fun startPublishScreen() {
         if (publisherScreen == null) {
             Log.d(TAG, "Initiate Screenshare")
@@ -371,60 +391,69 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     var sessionListener = object : Session.SessionListener {
         override fun onConnected(p0: Session?) {
             Log.d(TAG, "Session Connected")
+            pd?.hide()
+            showGlassDialog(matched_session_code)
+            //startPublishScreen()
         }
 
         override fun onDisconnected(p0: Session?) {
             Log.d(TAG, "Session Disconnected")
+            pd?.hide()
         }
 
         override fun onStreamReceived(p0: Session?, p1: Stream?) {
             Log.d(TAG, "Stream Received")
+            pd?.hide()
         }
 
         override fun onStreamDropped(p0: Session?, p1: Stream?) {
             Log.d(TAG, "Stream Dropped")
+            pd?.hide()
         }
 
         override fun onError(p0: Session?, p1: OpentokError?) {
+            pd?.hide()
             Log.e(TAG, "Session Error: ${p1?.message ?: "null error message"}")
+            Toast.makeText(context_actvity, "Session Error: ${p1?.message ?: "null error message"}", Toast.LENGTH_SHORT).show()
         }
     }
 
     var signalListener = object : Session.SignalListener {
         override fun onSignalReceived(p0: Session?, p1: String?, p2: String?, p3: Connection?) {
             when (p1) {
-                "CodeRequested" -> {
-                    if (p2 == matched_session_code) {
+                "screenshare" -> {
+                    var new_p2 = Gson().fromJson(p2, CodeRequestedResponse::class.java)
+                    if (new_p2.value == matched_session_code) {
                         session_dialog?.dismiss()
                         startPublishScreen()
                     }
                 }
                 "Draw" -> {
                     Log.d(TAG, "Draw signal received with data: $p2")
-                    if (p2 != null && p2 != "") {
-                        try {
-                            val json = Gson().fromJson(p2, DrawData::class.java)
-                            circleOverlay?.let {
-                                it.showOval(
-                                    json.x.toFloat(),
-                                    json.y.toFloat(),
-                                    json.radiusX?.toFloat() ?: 100f,
-                                    json.radiusY?.toFloat() ?: 50f
-                                )
-                                Log.d(TAG, "Oval shown at x:${json.x}, y:${json.y}, radiusX:${json.radiusX ?: 100}, radiusY:${json.radiusY ?: 50}")
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    it.hideOval()
-                                    Log.d(TAG, "Oval hide triggered after 2 seconds")
-                                }, 2000)
-                            } ?: Log.e(TAG, "CircleOverlay is null when trying to draw - permission might not be granted")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error parsing draw data: ${e.message}")
-                        }
-                    }
+//                    if (p2 != null && p2 != "") {
+//                        try {
+//                            val json = Gson().fromJson(p2, DrawData::class.java)
+//                            circleOverlay?.let {
+//                                it.showOval(
+//                                    json.x.toFloat(),
+//                                    json.y.toFloat(),
+//                                    json.radiusX?.toFloat() ?: 100f,
+//                                    json.radiusY?.toFloat() ?: 50f
+//                                )
+//                                Log.d(TAG, "Oval shown at x:${json.x}, y:${json.y}, radiusX:${json.radiusX ?: 100}, radiusY:${json.radiusY ?: 50}")
+//                                Handler(Looper.getMainLooper()).postDelayed({
+//                                    it.hideOval()
+//                                    Log.d(TAG, "Oval hide triggered after 2 seconds")
+//                                }, 2000)
+//                            } ?: Log.e(TAG, "CircleOverlay is null when trying to draw - permission might not be granted")
+//                        } catch (e: Exception) {
+//                            Log.e(TAG, "Error parsing draw data: ${e.message}")
+//                        }
+//                    }
                 }
             }
-            Log.e("here", p1.toString())
-            Log.e("here", p2.toString())
+            Log.e("hereSignalTitle", p1.toString())
+            Log.e("hereSignalBody", p2.toString())
         }
     }
 

@@ -103,8 +103,8 @@ object Utils {
         return strDate
     }
 
-    fun isNetworkOnline1(context: Context): Boolean {
-        val connectivityManager = context.getSystemService(
+    fun isNetworkOnline1(context: Context?): Boolean {
+        val connectivityManager = context?.getSystemService(
             Context.CONNECTIVITY_SERVICE) as ConnectivityManager?
             ?: return false
 
