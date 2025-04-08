@@ -42,6 +42,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+    implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("pub.devrel:easypermissions:3.0.0")
     implementation("com.opentok.android:opentok-android-sdk:2.29.1")
     testImplementation("junit:junit:4.13.2")

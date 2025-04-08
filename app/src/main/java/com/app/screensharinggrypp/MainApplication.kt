@@ -17,7 +17,7 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance  = this
-        screenShareComponent = ScreenShareComponent(this, ProcessLifecycleOwner.get().lifecycle)
+        screenShareComponent = ScreenShareComponent(this, ProcessLifecycleOwner.get().lifecycle,"grypp_live_xK2P9M7a1LqVb3Wz6JtD4RfXyE8Nc0Q5")
 
     }
 }

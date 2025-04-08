@@ -1,7 +1,6 @@
 package com.app.screenshare.sharingMain
 
 import android.app.AlertDialog
-import android.app.ProgressDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -9,6 +8,7 @@ import android.content.ServiceConnection
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -27,9 +27,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.app.screenshare.model.response.CodeRequestedResponse
 import com.app.screenshare.model.response.CreateSessionResponse
+import com.app.screenshare.model.response.SignalBaseResponse
 import com.app.screenshare.service.RestApiBuilder
 import com.app.screenshare.util.ProgressAlertDialog
-
 import com.app.screenshare.util.SessionCodeDialog
 import com.app.screenshare.util.Utils
 import com.google.gson.Gson
@@ -44,15 +44,18 @@ import java.nio.ByteBuffer
 class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver {
     var session: Session? = null
     var context: Context? = null
-    var context_actvity: Context? = null
+    var context_activity: Context? = null
     var lifecycle: Lifecycle? = null
     var session_dialog: SessionCodeDialog? = null
     private var circleOverlay: CircleOverlayView? = null
     private var windowManager: WindowManager? = null
+    private val drawChunks = mutableMapOf<String, MutableList<DrawEndSignal>>()
+    var api_Key = ""
 
-    constructor(context: Context, lifecycle1: Lifecycle) : this() {
+    constructor(context: Context, lifecycle1: Lifecycle,apiKey:String) : this() {
         Log.e("Calling", "Constructor")
         this.context = context
+        api_Key = apiKey
         lifecycle = lifecycle1
         lifecycle?.addObserver(this)
 
@@ -60,7 +63,6 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         if (context != null) {
             windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             circleOverlay = CircleOverlayView(context)
-            // Defer adding the overlay until permission is granted
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (Settings.canDrawOverlays(context)) {
                     addOverlayView()
@@ -68,7 +70,6 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                     requestOverlayPermission()
                 }
             } else {
-                // For pre-Marshmallow, no permission needed
                 addOverlayView()
             }
         }
@@ -84,7 +85,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID = "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
-        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDRUMDY6Mjg6MjcuNDAzNDU5OTM3WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0Mzc1OTc1MSwianRpIjoiMjU4ZGQyMmEtOWZjZC00OTAzLWExYjItMTY0MzllY2I2MThiIiwiaWF0IjoxNzQzNzU5NDUxLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0Mzc1OTQzNiwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MzUxNDUxLCJqdGkiOiJkOGZhOTc0Yi0xMGZmLTQ1ZmUtOTkyMy05MDBkYTg2NjE1NjEiLCJpYXQiOjE3NDM3NTk0NTEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNzU5NDM2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.hgJi87EKpI_V-bS4G6r2Tuc_YwesqEMJpbiOxT7d8gmA7_UUjRWsGPvpyR_xcyeyPn81oVItD3zLZEM9sBG19MaT8Nl6WV4FMvgJDkwy40yRWPDuPvo8TCat132EmSeZ0Ar8lb7hVOLP9Z0rP0ksQkpQU8KcuUzXj8QY6tJMhDVG8s3VoCqQbCYgJIuHvNYU5Pm9Zq7P973QcfKuhmYCfJ4kyVH_WdEs3ysNTJieUseAej0ceR3BqkzQsWHWhpVj8EjIpe26JZFaEeSrtb2gOpaNGOS4_vOjlc_02kZk-Yw3kzLxgcLc3bXz3Sw5Zc22ih6GZtGWPyEyrP8OB0zb_g"
+        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDRUMDY6Mjg6MjcuNDAzNDU5OTM3WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0Mzc1OTc1MSwianRpIjoiMjU4ZGQyMmEtOWZjZC00OTAzLWExYjItMTY0MzllY2I2MThiIiwiaWF0IjoxNzQzNzU5NDUxLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0Mzc1OTQzNiwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRhTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MzUxNDUxLCJqdGkiOiJkOGZhOTc0Yi0xMGZmLTQ1ZmUtOTkyMy05MDBkYTg2NjE1NjEiLCJpYXQiOjE3NDM3NTk0NTEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNzU5NDM2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.hgJi87EKpI_V-bS4G6r2Tuc_YwesqEMJpbiOxT7d8gmA7_UUjRWsGPvpyR_xcyeyPn81oVItD3zLZEM9sBG19MaT8Nl6WV4FMvgJDkwy40yRWPDuPvo8TCat132EmSeZ0Ar8lb7hVOLP9Z0rP0ksQkpQU8KcuUzXj8QY6tJMhDVG8s3VoCqQbCYgJIuHvNYU5Pm9Zq7P973QcfKuhmYCfJ4kyVH_WdEs3ysNTJieUseAej0ceR3BqkzQsWHWhpVj8EjIpe26JZFaEeSrtb2gOpaNGOS4_vOjlc_02kZk-Yw3kzLxgcLc3bXz3Sw5Zc22ih6GZtGWPyEyrP8OB0zb_g"
     }
 
     private var publisherScreen: Publisher? = null
@@ -129,8 +130,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     private fun requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context_actvity != null) {
-            AlertDialog.Builder(context_actvity!!)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context_activity != null) {
+            AlertDialog.Builder(context_activity!!)
                 .setTitle("Overlay Permission Required")
                 .setMessage("This app needs permission to draw over other apps to enable screen annotations. Please allow this permission in the next screen.")
                 .setPositiveButton("Allow") { _, _ ->
@@ -138,15 +139,14 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${context?.packageName}")
                     )
-                    (context_actvity as AppCompatActivity).startActivityForResult(intent, RC_OVERLAY_PERMISSION)
+                    (context_activity as AppCompatActivity).startActivityForResult(intent, RC_OVERLAY_PERMISSION)
                     Log.d(TAG, "Overlay permission requested")
                 }
                 .setNegativeButton("Cancel") { dialog, _ ->
                     dialog.dismiss()
                     Log.d(TAG, "Overlay permission request canceled by user")
-                    // Optionally handle cancellation (e.g., inform user feature won't work)
                 }
-                .setCancelable(false) // Prevents dismissing by tapping outside
+                .setCancelable(false)
                 .show()
         }
     }
@@ -158,22 +158,21 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 Handler().postDelayed({
                     Log.e("here Checking", isCurrentAppIsVisible.toString())
                     if (isCurrentAppIsVisible) {
-                            pd?.hide()
-                            val intent = Intent(context, MediaProjectionService::class.java)
-                            intent.putExtra("resultCode", resultCode)
-                            intent.putExtra("data", data)
-                            context?.startService(intent)
-                            context?.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+                        pd?.hide()
+                        val intent = Intent(context, MediaProjectionService::class.java)
+                        intent.putExtra("resultCode", resultCode)
+                        intent.putExtra("data", data)
+                        context?.startService(intent)
+                        context?.bindService(intent, connection, Context.BIND_AUTO_CREATE)
                     }
                 }, 100)
             }
             RC_OVERLAY_PERMISSION -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(context)) {
                     Log.d(TAG, "Overlay permission granted")
-                    addOverlayView() // Add the overlay now that permission is granted
+                    addOverlayView()
                 } else {
                     Log.e(TAG, "Overlay permission denied")
-                    // Optionally inform the user that the feature won't work without permission
                 }
             }
         }
@@ -202,6 +201,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         Log.d(TAG, "Component: onDestroy")
         cleanup()
         lifecycle?.removeObserver(this)
+        drawChunks.clear()
     }
 
     private fun requestPermissions() {
@@ -211,11 +211,11 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             android.Manifest.permission.FOREGROUND_SERVICE
         )
 
-        if (EasyPermissions.hasPermissions(context_actvity!!, *perms)) {
+        if (EasyPermissions.hasPermissions(context_activity!!, *perms)) {
             initializeComponent()
         } else {
             EasyPermissions.requestPermissions(
-                context_actvity as AppCompatActivity,
+                context_activity as AppCompatActivity,
                 "This app needs access to your camera and mic to make video calls",
                 RC_VIDEO_APP_PERM,
                 *perms
@@ -224,8 +224,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     fun attachActivity(context: Context) {
-        this.context_actvity = context
-        pd = ProgressAlertDialog(context_actvity!!)
+        this.context_activity = context
+        pd = ProgressAlertDialog(context_activity!!)
     }
 
     fun handlePermissionResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -243,21 +243,22 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             pd?.show()
             val apiService = RestApiBuilder().service
             CoroutineScope(Dispatchers.IO).launch {
-                if(Utils.isNetworkOnline1(context)){
-
+                if (Utils.isNetworkOnline1(context)) {
                     try {
-                        val response = apiService.createSession(" grypp_live_xK2P9M7a1LqVb3Wz6JtD4RfXyE8Nc0Q5")
+                        if(api_Key.isEmpty()){
+                            showToast("Api Key is empty")
+                            return@launch
+                        }
+
+                        val response = apiService.createSession(api_Key)
                         if (response.isSuccessful) {
                             val data = response.body()
                             withContext(Dispatchers.Main) {
-                                pd?.hide()
-                                //session = Session.Builder(context, API_KEY, SESSION_ID).build()
+
                                 session = Session.Builder(context, response.body()?.apiKey, response.body()?.sessionId).build()
                                 session?.setSessionListener(sessionListener)
                                 session?.setSignalListener(signalListener)
                                 session?.connect(response.body()?.customerToken)
-                                //session?.connect(TOKEN)
-                                pd?.show()
                                 matched_session_code = response.body()?.sessionCode ?: ""
 
                                 Log.e("this@MainActivity", "Data: $data")
@@ -276,21 +277,21 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                             showToast("Error: $e")
                         }
                     }
-                }else{
+                } else {
                     withContext(Dispatchers.Main) {
                         pd?.hide()
                         showToast("No Internet Connection")
                     }
                 }
-
             }
         }
     }
 
     fun showToast(message: String) {
-        if (context_actvity == null) return
-        Toast.makeText(context_actvity, message, Toast.LENGTH_SHORT).show()
+        if (context_activity == null) return
+        Toast.makeText(context_activity, message, Toast.LENGTH_SHORT).show()
     }
+
     fun startPublishScreen() {
         if (publisherScreen == null) {
             Log.d(TAG, "Initiate Screenshare")
@@ -310,7 +311,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     private fun requestScreenCapture() {
         val projectionManager = context?.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val intent = projectionManager.createScreenCaptureIntent()
-        (context_actvity as AppCompatActivity).startActivityForResult(intent, RC_SCREEN_CAPTURE)
+        (context_activity as AppCompatActivity).startActivityForResult(intent, RC_SCREEN_CAPTURE)
     }
 
     private fun publishScreen() {
@@ -330,14 +331,16 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
             Log.d(TAG, "Publishing Screen")
             session?.publish(publisherScreen)
-            session?.sendSignal("ScreenDetails", "{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${Utils.getScreenWidth()},height: ${Utils.getScreenHeight()}}")
+
+            session?.sendSignal("screenshare", "{type : ScreenDetails,payload:{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${MediaProjectionService.width},height: ${MediaProjectionService.height}}}")
+            Log.e("hereSignal ","{type : ScreenDetails,payload:{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${MediaProjectionService.width},height: ${MediaProjectionService.height}}}")
         }
     }
 
     private fun showGlassDialog(sessionCode: String) {
-        if (context_actvity != null && sessionCode != "") {
+        if (context_activity != null && sessionCode != "") {
             session_dialog = SessionCodeDialog(
-                context = context_actvity!!,
+                context = context_activity!!,
                 title = sessionCode,
                 message = "Please Share the code to executive",
                 cancelText = "Cancel",
@@ -393,7 +396,6 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             Log.d(TAG, "Session Connected")
             pd?.hide()
             showGlassDialog(matched_session_code)
-            //startPublishScreen()
         }
 
         override fun onDisconnected(p0: Session?) {
@@ -414,7 +416,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         override fun onError(p0: Session?, p1: OpentokError?) {
             pd?.hide()
             Log.e(TAG, "Session Error: ${p1?.message ?: "null error message"}")
-            Toast.makeText(context_actvity, "Session Error: ${p1?.message ?: "null error message"}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context_activity, "Session Error: ${p1?.message ?: "null error message"}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -422,39 +424,72 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         override fun onSignalReceived(p0: Session?, p1: String?, p2: String?, p3: Connection?) {
             when (p1) {
                 "screenshare" -> {
-                    var new_p2 = Gson().fromJson(p2, CodeRequestedResponse::class.java)
-                    if (new_p2.value == matched_session_code) {
-                        session_dialog?.dismiss()
-                        startPublishScreen()
+                    var actionSignal = Gson().fromJson(p2, SignalBaseResponse::class.java)
+                    if (actionSignal.action == Utils.codeRequested) {
+                        Log.d(TAG, "Code Requested signal received")
+                        var code = Gson().fromJson(p2, CodeRequestedResponse::class.java)
+                        Log.e("here",code.toString())
+                        if (code.value == matched_session_code) {
+                            session_dialog?.dismiss()
+                            startPublishScreen()
+                        }
                     }
+                    if(actionSignal.action == "draw"){
+                        Log.d(TAG, "Draw signal received with data: $p2")
+                        if (p2.isNullOrEmpty()) {
+                            Log.e(TAG, "Draw signal data is null or empty")
+                            return
+                        }
+                        try {
+                            // Step 1: Parse outer JSON into DrawSignal
+                            val drawSignal = Gson().fromJson(p2, DrawSignal::class.java)
+                            Log.d(TAG, "DrawSignal parsed: $drawSignal")
+
+                            // Step 2: Parse nested JSON into DrawEndSignal
+                            val drawEndSignal = Gson().fromJson(drawSignal.value, DrawEndSignal::class.java)
+                            Log.d(TAG, "DrawEndSignal parsed: action=${drawEndSignal.action}, eventId=${drawEndSignal.eventId}, order=${drawEndSignal.order}, totalChunks=${drawEndSignal.totalChunks}")
+                            val eventId = drawEndSignal.eventId
+                            val chunks = drawChunks.getOrPut(eventId) { mutableListOf() }
+                            chunks.add(drawEndSignal)
+                            Log.d(TAG, "Stored chunk ${drawEndSignal.order + 1}/${drawEndSignal.totalChunks} for event $eventId")
+
+
+                            if (chunks.size == drawEndSignal.totalChunks) {
+                                val sortedChunks = chunks.sortedBy { it.order }
+                                val combinedBase64 = sortedChunks.joinToString("") { it.value }
+                                val decodedBytes = android.util.Base64.decode(combinedBase64, android.util.Base64.DEFAULT)
+                                val decodedJson = String(decodedBytes, Charsets.UTF_8)
+                                Log.d(TAG, "Combined decoded JSON: $decodedJson")
+                                val pathData = Gson().fromJson(decodedJson, PathDrawData::class.java)
+                                drawPath(pathData)
+                                drawChunks.remove(eventId)
+                            }
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error processing draw signal: ${e.message}", e)
+                        }
+                    }
+
                 }
-                "Draw" -> {
-                    Log.d(TAG, "Draw signal received with data: $p2")
-//                    if (p2 != null && p2 != "") {
-//                        try {
-//                            val json = Gson().fromJson(p2, DrawData::class.java)
-//                            circleOverlay?.let {
-//                                it.showOval(
-//                                    json.x.toFloat(),
-//                                    json.y.toFloat(),
-//                                    json.radiusX?.toFloat() ?: 100f,
-//                                    json.radiusY?.toFloat() ?: 50f
-//                                )
-//                                Log.d(TAG, "Oval shown at x:${json.x}, y:${json.y}, radiusX:${json.radiusX ?: 100}, radiusY:${json.radiusY ?: 50}")
-//                                Handler(Looper.getMainLooper()).postDelayed({
-//                                    it.hideOval()
-//                                    Log.d(TAG, "Oval hide triggered after 2 seconds")
-//                                }, 2000)
-//                            } ?: Log.e(TAG, "CircleOverlay is null when trying to draw - permission might not be granted")
-//                        } catch (e: Exception) {
-//                            Log.e(TAG, "Error parsing draw data: ${e.message}")
-//                        }
-//                    }
-                }
+
             }
             Log.e("hereSignalTitle", p1.toString())
             Log.e("hereSignalBody", p2.toString())
         }
+    }
+    private fun drawPath(pathData: PathDrawData) {
+        circleOverlay?.let {
+            if (pathData.type == "path") {
+                it.showPath(pathData)
+                Log.d(TAG, "Path drawn with stroke: ${pathData.stroke}, path size: ${pathData.path.size}")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    it.hidePath()
+                    Log.d(TAG, "Path hidden after 2 seconds")
+                }, 4000)
+            } else {
+                Log.e(TAG, "PathData type is not 'path': ${pathData.type}")
+            }
+        } ?: Log.e(TAG, "CircleOverlay is null - ensure overlay permission is granted")
     }
 
     var publisherListener = object : PublisherKit.PublisherListener {
@@ -479,57 +514,101 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         onDestroyService()
     }
 
-    data class DrawData(
-        val x: Int,
-        val y: Int,
-        val radiusX: Int? = null, // Horizontal radius
-        val radiusY: Int? = null  // Vertical radius
+    data class DrawSignal(
+        val action: String,
+        val value: String
+    )
+
+    data class DrawEndSignal(
+        val action: String,
+        val value: String,
+        val eventId: String,
+        val order: Int,
+        val totalChunks: Int
+    )
+
+    data class PathDrawData(
+        val type: String,
+        val version: String,
+        val originX: String,
+        val originY: String,
+        val left: Float,
+        val top: Float,
+        val width: Float,
+        val height: Float,
+        val fill: String?,
+        val stroke: String,
+        val strokeWidth: Int,
+        val strokeDashArray: List<Float>?,
+        val strokeLineCap: String,
+        val strokeDashOffset: Int,
+        val strokeLineJoin: String,
+        val strokeUniform: Boolean,
+        val strokeMiterLimit: Int,
+        val scaleX: Float,
+        val scaleY: Float,
+        val angle: Float,
+        val flipX: Boolean,
+        val flipY: Boolean,
+        val opacity: Float,
+        val shadow: String?,
+        val visible: Boolean,
+        val backgroundColor: String,
+        val fillRule: String,
+        val paintFirst: String,
+        val globalCompositeOperation: String,
+        val skewX: Float,
+        val skewY: Float,
+        val selectable: Boolean,
+        val path: List<List<Any>>
     )
 }
 
 class CircleOverlayView(context: Context) : View(context) {
     private val paint = Paint().apply {
-        color = Color.RED
         style = Paint.Style.STROKE
-        strokeWidth = 5f
         isAntiAlias = true
     }
-
-    private var ovalX = 0f        // Center X of the oval
-    private var ovalY = 0f        // Center Y of the oval
-    private var radiusX = 100f    // Horizontal radius (half-width)
-    private var radiusY = 50f     // Vertical radius (half-height)
-    private var shouldDraw = false
+    private var path = Path()
+    private var shouldDrawPath = false
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        Log.d("CircleOverlayView", "onDraw called, shouldDraw: $shouldDraw")
-        if (shouldDraw) {
-            // Calculate the bounding rectangle for the oval
-            val left = ovalX - radiusX
-            val top = ovalY - radiusY
-            val right = ovalX + radiusX
-            val bottom = ovalY + radiusY
-            canvas.drawOval(left, top, right, bottom, paint)
-            Log.d("CircleOverlayView", "Drawing oval at center x:$ovalX, y:$ovalY, radiusX:$radiusX, radiusY:$radiusY")
+        if (shouldDrawPath) {
+            canvas.drawPath(path, paint)
+            Log.d("CircleOverlayView", "Drawing path on canvas")
         } else {
-            Log.d("CircleOverlayView", "Not drawing oval")
+            Log.d("CircleOverlayView", "No path to draw")
         }
     }
 
-    fun showOval(x: Float, y: Float, rX: Float = 100f, rY: Float = 50f) {
-        ovalX = x
-        ovalY = y
-        radiusX = rX
-        radiusY = rY
-        shouldDraw = true
-        Log.d("CircleOverlayView", "showOval called with x:$x, y:$y, rX:$rX, rY:$rY")
+    fun showPath(pathData: ScreenShareComponent.PathDrawData) {
+        paint.color = Color.parseColor(pathData.stroke ?: "#FF0000")
+        paint.strokeWidth = pathData.strokeWidth.toFloat()
+        path.reset()
+        Log.d("CircleOverlayView", "Showing path with stroke: ${pathData.stroke}, width: ${pathData.strokeWidth}")
+        pathData.path.forEach { command ->
+            try {
+                when (command[0] as String) {
+                    "M" -> path.moveTo(command[1].toString().toFloat(), command[2].toString().toFloat())
+                    "Q" -> path.quadTo(
+                        command[1].toString().toFloat(), command[2].toString().toFloat(),
+                        command[3].toString().toFloat(), command[4].toString().toFloat()
+                    )
+                    "L" -> path.lineTo(command[1].toString().toFloat(), command[2].toString().toFloat())
+                }
+            } catch (e: Exception) {
+                Log.e("CircleOverlayView", "Error processing path command: $command, ${e.message}", e)
+            }
+        }
+        shouldDrawPath = true
         invalidate()
+        Log.d("CircleOverlayView", "Path invalidated, should draw: $shouldDrawPath")
     }
 
-    fun hideOval() {
-        shouldDraw = false
-        Log.d("CircleOverlayView", "hideOval called")
+    fun hidePath() {
+        shouldDrawPath = false
         invalidate()
+        Log.d("CircleOverlayView", "Path hidden")
     }
 }

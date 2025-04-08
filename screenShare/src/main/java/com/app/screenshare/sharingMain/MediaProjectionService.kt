@@ -39,13 +39,15 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         const val VIRTUAL_DISPLAY_FLAGS =
             DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY or
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
+
+        var width = 240
+        var height = 320
     }
 
     private var binder: MediaProjectionBinder? = null
     private var binderIntent: Intent? = null
 
-    private var width = 240
-    private var height = 320
+
     private var density = 0
 
     private var imageReader: ImageReader? = null

@@ -26,6 +26,7 @@ object Utils {
 
     private var toast: Toast? = null
     private var snackbar: Snackbar? = null
+    var codeRequested = "CodeRequested"
 
     fun getOSName(): String {
         var osName = ""
