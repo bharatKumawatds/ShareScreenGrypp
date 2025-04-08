@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import pub.devrel.easypermissions.EasyPermissions
 import java.nio.ByteBuffer
 
@@ -332,8 +333,23 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             Log.d(TAG, "Publishing Screen")
             session?.publish(publisherScreen)
 
-            session?.sendSignal("screenshare", "{type : ScreenDetails,payload:{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${MediaProjectionService.width},height: ${MediaProjectionService.height}}}")
-            Log.e("hereSignal ","{type : ScreenDetails,payload:{brand: ${android.os.Build.BRAND}, model: ${android.os.Build.MODEL},width: ${MediaProjectionService.width},height: ${MediaProjectionService.height}}}")
+            try {
+                val payload = JSONObject().apply {
+                    put("brand", android.os.Build.BRAND)
+                    put("model", android.os.Build.MODEL)
+                    put("width", MediaProjectionService.width)
+                    put("height", MediaProjectionService.height)
+                }
+                val signalData = JSONObject().apply {
+                    put("type", "ScreenDetails")
+                    put("payload", payload)
+                }
+                val signalString = signalData.toString()
+                session?.sendSignal("screenshare", signalString)
+                Log.d(TAG, "Sent signal: $signalString")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating ScreenDetails signal: ${e.message}", e)
+            }
         }
     }
 
@@ -434,7 +450,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                             startPublishScreen()
                         }
                     }
-                    if(actionSignal.action == "draw"){
+                    if(actionSignal.action == Utils.draw){
                         Log.d(TAG, "Draw signal received with data: $p2")
                         if (p2.isNullOrEmpty()) {
                             Log.e(TAG, "Draw signal data is null or empty")
@@ -468,6 +484,27 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                         } catch (e: Exception) {
                             Log.e(TAG, "Error processing draw signal: ${e.message}", e)
                         }
+                    }
+                    if(actionSignal.action == Utils.MARKER_MOVE){
+//                        var markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
+//                        Log.e("here",markerMoveSignal.toString())
+                        try {
+                            val markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
+                            val markerValue = markerMoveSignal.value
+                            circleOverlay?.showMarker(
+                                markerValue.x.toFloat(),
+                                markerValue.y.toFloat(),
+                                markerValue.userName,
+                                markerValue.scale
+                            )
+//                            // Hide marker after 4 seconds
+//                            Handler(Looper.getMainLooper()).postDelayed({
+//                                circleOverlay?.hideMarker()
+//                            }, 4000)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error processing marker move signal: ${e.message}", e)
+                        }
+
                     }
 
                 }
@@ -562,6 +599,17 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         val selectable: Boolean,
         val path: List<List<Any>>
     )
+    data class MarkerMoveResponse(
+        val action: String,
+        val value: MarkerValue
+    )
+
+    data class MarkerValue(
+        val userName: String,
+        val x: Int,
+        val y: Int,
+        val scale: Float
+    )
 }
 
 class CircleOverlayView(context: Context) : View(context) {
@@ -569,16 +617,40 @@ class CircleOverlayView(context: Context) : View(context) {
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
+    private val textPaint = Paint().apply {
+        color = Color.RED
+        textSize = 40f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+
+    }
+    private val circlePaint = Paint().apply {
+        color = Color.RED // Circle color
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        isAntiAlias = true
+    }
     private var path = Path()
     private var shouldDrawPath = false
+    private var shouldDrawMarker = false
+    private var markerX: Float = 0f
+    private var markerY: Float = 0f
+    private var markerRadius: Float = 50f
+    private var markerName: String = ""
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (shouldDrawPath) {
             canvas.drawPath(path, paint)
             Log.d("CircleOverlayView", "Drawing path on canvas")
-        } else {
-            Log.d("CircleOverlayView", "No path to draw")
+        }
+        if (shouldDrawMarker) {
+            canvas.drawCircle(markerX, markerY, markerRadius, circlePaint)
+            canvas.drawText(markerName, markerX, markerY - markerRadius - 10f, textPaint)
+            Log.d("CircleOverlayView", "Drawing marker at ($markerX, $markerY) with name: $markerName")
+        }
+        if (!shouldDrawPath && !shouldDrawMarker) {
+            Log.d("CircleOverlayView", "Nothing to draw")
         }
     }
 
@@ -602,13 +674,30 @@ class CircleOverlayView(context: Context) : View(context) {
             }
         }
         shouldDrawPath = true
+        // Removed shouldDrawMarker = false to allow both
         invalidate()
-        Log.d("CircleOverlayView", "Path invalidated, should draw: $shouldDrawPath")
+    }
+
+    fun showMarker(x: Float, y: Float, userName: String, scale: Float) {
+        markerX = x
+        markerY = y
+        markerName = userName
+        markerRadius = 50f * scale
+        shouldDrawMarker = true
+        // Removed shouldDrawPath = false to allow both
+        invalidate()
+        Log.d("CircleOverlayView", "Showing marker for $userName at ($x, $y) with scale $scale")
     }
 
     fun hidePath() {
         shouldDrawPath = false
         invalidate()
         Log.d("CircleOverlayView", "Path hidden")
+    }
+
+    fun hideMarker() {
+        shouldDrawMarker = false
+        invalidate()
+        Log.d("CircleOverlayView", "Marker hidden")
     }
 }

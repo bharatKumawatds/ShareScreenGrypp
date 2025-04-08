@@ -27,6 +27,8 @@ object Utils {
     private var toast: Toast? = null
     private var snackbar: Snackbar? = null
     var codeRequested = "CodeRequested"
+    var draw = "draw"
+    var MARKER_MOVE = "MARKER_MOVE"
 
     fun getOSName(): String {
         var osName = ""
