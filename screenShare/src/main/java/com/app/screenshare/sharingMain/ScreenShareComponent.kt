@@ -191,6 +191,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         Log.d(TAG, "Component: onPause")
         isCurrentAppIsVisible = false
         pauseSession()
+        circleOverlay?.hidePath()
+        circleOverlay?.hideMarker()
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -438,80 +440,83 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
     var signalListener = object : Session.SignalListener {
         override fun onSignalReceived(p0: Session?, p1: String?, p2: String?, p3: Connection?) {
-            when (p1) {
-                "screenshare" -> {
-                    var actionSignal = Gson().fromJson(p2, SignalBaseResponse::class.java)
-                    if (actionSignal.action == Utils.codeRequested) {
-                        Log.d(TAG, "Code Requested signal received")
-                        var code = Gson().fromJson(p2, CodeRequestedResponse::class.java)
-                        Log.e("here",code.toString())
-                        if (code.value == matched_session_code) {
-                            session_dialog?.dismiss()
-                            startPublishScreen()
-                        }
-                    }
-                    if(actionSignal.action == Utils.draw){
-                        Log.d(TAG, "Draw signal received with data: $p2")
-                        if (p2.isNullOrEmpty()) {
-                            Log.e(TAG, "Draw signal data is null or empty")
-                            return
-                        }
-                        try {
-                            // Step 1: Parse outer JSON into DrawSignal
-                            val drawSignal = Gson().fromJson(p2, DrawSignal::class.java)
-                            Log.d(TAG, "DrawSignal parsed: $drawSignal")
-
-                            // Step 2: Parse nested JSON into DrawEndSignal
-                            val drawEndSignal = Gson().fromJson(drawSignal.value, DrawEndSignal::class.java)
-                            Log.d(TAG, "DrawEndSignal parsed: action=${drawEndSignal.action}, eventId=${drawEndSignal.eventId}, order=${drawEndSignal.order}, totalChunks=${drawEndSignal.totalChunks}")
-                            val eventId = drawEndSignal.eventId
-                            val chunks = drawChunks.getOrPut(eventId) { mutableListOf() }
-                            chunks.add(drawEndSignal)
-                            Log.d(TAG, "Stored chunk ${drawEndSignal.order + 1}/${drawEndSignal.totalChunks} for event $eventId")
-
-
-                            if (chunks.size == drawEndSignal.totalChunks) {
-                                val sortedChunks = chunks.sortedBy { it.order }
-                                val combinedBase64 = sortedChunks.joinToString("") { it.value }
-                                val decodedBytes = android.util.Base64.decode(combinedBase64, android.util.Base64.DEFAULT)
-                                val decodedJson = String(decodedBytes, Charsets.UTF_8)
-                                Log.d(TAG, "Combined decoded JSON: $decodedJson")
-                                val pathData = Gson().fromJson(decodedJson, PathDrawData::class.java)
-                                drawPath(pathData)
-                                drawChunks.remove(eventId)
+            if(isCurrentAppIsVisible){
+                when (p1) {
+                    "screenshare" -> {
+                        var actionSignal = Gson().fromJson(p2, SignalBaseResponse::class.java)
+                        if (actionSignal.action == Utils.codeRequested) {
+                            Log.d(TAG, "Code Requested signal received")
+                            var code = Gson().fromJson(p2, CodeRequestedResponse::class.java)
+                            Log.e("here",code.toString())
+                            if (code.value == matched_session_code) {
+                                session_dialog?.dismiss()
+                                startPublishScreen()
                             }
-
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error processing draw signal: ${e.message}", e)
                         }
-                    }
-                    if(actionSignal.action == Utils.MARKER_MOVE){
+                        if(actionSignal.action == Utils.draw){
+                            Log.d(TAG, "Draw signal received with data: $p2")
+                            if (p2.isNullOrEmpty()) {
+                                Log.e(TAG, "Draw signal data is null or empty")
+                                return
+                            }
+                            try {
+                                // Step 1: Parse outer JSON into DrawSignal
+                                val drawSignal = Gson().fromJson(p2, DrawSignal::class.java)
+                                Log.d(TAG, "DrawSignal parsed: $drawSignal")
+
+                                // Step 2: Parse nested JSON into DrawEndSignal
+                                val drawEndSignal = Gson().fromJson(drawSignal.value, DrawEndSignal::class.java)
+                                Log.d(TAG, "DrawEndSignal parsed: action=${drawEndSignal.action}, eventId=${drawEndSignal.eventId}, order=${drawEndSignal.order}, totalChunks=${drawEndSignal.totalChunks}")
+                                val eventId = drawEndSignal.eventId
+                                val chunks = drawChunks.getOrPut(eventId) { mutableListOf() }
+                                chunks.add(drawEndSignal)
+                                Log.d(TAG, "Stored chunk ${drawEndSignal.order + 1}/${drawEndSignal.totalChunks} for event $eventId")
+
+
+                                if (chunks.size == drawEndSignal.totalChunks) {
+                                    val sortedChunks = chunks.sortedBy { it.order }
+                                    val combinedBase64 = sortedChunks.joinToString("") { it.value }
+                                    val decodedBytes = android.util.Base64.decode(combinedBase64, android.util.Base64.DEFAULT)
+                                    val decodedJson = String(decodedBytes, Charsets.UTF_8)
+                                    Log.d(TAG, "Combined decoded JSON: $decodedJson")
+                                    val pathData = Gson().fromJson(decodedJson, PathDrawData::class.java)
+                                    drawPath(pathData)
+                                    drawChunks.remove(eventId)
+                                }
+
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error processing draw signal: ${e.message}", e)
+                            }
+                        }
+                        if(actionSignal.action == Utils.MARKER_MOVE){
 //                        var markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
 //                        Log.e("here",markerMoveSignal.toString())
-                        try {
-                            val markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
-                            val markerValue = markerMoveSignal.value
-                            circleOverlay?.showMarker(
-                                markerValue.x.toFloat(),
-                                markerValue.y.toFloat(),
-                                markerValue.userName,
-                                markerValue.scale
-                            )
+                            try {
+                                val markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
+                                val markerValue = markerMoveSignal.value
+                                circleOverlay?.showMarker(
+                                    markerValue.x.toFloat(),
+                                    markerValue.y.toFloat(),
+                                    markerValue.userName,
+                                    markerValue.scale
+                                )
 //                            // Hide marker after 4 seconds
-//                            Handler(Looper.getMainLooper()).postDelayed({
-//                                circleOverlay?.hideMarker()
-//                            }, 4000)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error processing marker move signal: ${e.message}", e)
+//                                Handler(Looper.getMainLooper()).postDelayed({
+//                                    circleOverlay?.hideMarker()
+//                                }, 4000)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error processing marker move signal: ${e.message}", e)
+                            }
+
                         }
 
                     }
 
                 }
-
+                Log.e("hereSignalTitle", p1.toString())
+                Log.e("hereSignalBody", p2.toString())
             }
-            Log.e("hereSignalTitle", p1.toString())
-            Log.e("hereSignalBody", p2.toString())
+
         }
     }
     private fun drawPath(pathData: PathDrawData) {
