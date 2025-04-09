@@ -18,6 +18,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -63,16 +64,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         // Initialize WindowManager
         if (context != null) {
             windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            circleOverlay = CircleOverlayView(context)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (Settings.canDrawOverlays(context)) {
-                    addOverlayView()
-                } else {
-                    requestOverlayPermission()
-                }
-            } else {
-                addOverlayView()
-            }
+
         }
     }
 
@@ -109,6 +101,27 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             mediaProjectionBinder?.mediaProjectionHandler = this@ScreenShareComponent
             publishScreen()
         }
+    }
+    // Define onTouchEvent directly (no interface needed)
+    fun onTouchEvent(event: MotionEvent): Boolean {
+        val cursorName = "Local User" // You can customize this (e.g., fetch from a user profile)
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                Log.d(TAG, "Touch DOWN at (${event.x}, ${event.y})")
+                circleOverlay?.showCursor(event.x, event.y, cursorName)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                Log.d(TAG, "Touch MOVE at (${event.x}, ${event.y})")
+                circleOverlay?.showCursor(event.x, event.y, cursorName)
+            }
+            MotionEvent.ACTION_UP -> {
+                Log.d(TAG, "Touch UP at (${event.x}, ${event.y})")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    circleOverlay?.hideCursor()
+                }, 2000) // Hide cursor after 2 seconds
+            }
+        }
+        return false // Allow event propagation
     }
 
     private fun addOverlayView() {
@@ -242,6 +255,16 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
             requestOverlayPermission()
         } else {
+            circleOverlay = CircleOverlayView(context!!)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Settings.canDrawOverlays(context)) {
+                    addOverlayView()
+                } else {
+                    requestOverlayPermission()
+                }
+            } else {
+                addOverlayView()
+            }
             pd?.setMessage("Please Wait...")
             pd?.show()
             val apiService = RestApiBuilder().service
@@ -618,23 +641,38 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 }
 
 class CircleOverlayView(context: Context) : View(context) {
+
+    // Paint for the existing path
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
+
+    // Paint for text (used for both marker and cursor names)
     private val textPaint = Paint().apply {
         color = Color.RED
         textSize = 40f
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
-
     }
+
+    // Paint for the existing marker circle
     private val circlePaint = Paint().apply {
-        color = Color.RED // Circle color
+        color = Color.RED
         style = Paint.Style.STROKE
         strokeWidth = 5f
         isAntiAlias = true
     }
+
+    // Paint for the new cursor
+    private val cursorPaint = Paint().apply {
+        color = Color.GREEN // Distinct color for the cursor
+        style = Paint.Style.STROKE // Filled circle
+        strokeWidth = 5f
+        isAntiAlias = true
+    }
+
+    // Existing variables for path and marker
     private var path = Path()
     private var shouldDrawPath = false
     private var shouldDrawMarker = false
@@ -643,22 +681,43 @@ class CircleOverlayView(context: Context) : View(context) {
     private var markerRadius: Float = 50f
     private var markerName: String = ""
 
+    // Variables for the new cursor
+    private var shouldDrawCursor = false
+    private var cursorX: Float = 0f
+    private var cursorY: Float = 0f
+    private val cursorRadius: Float = 20f // Smaller radius for the cursor
+    private var cursorName: String = "" // Name for the cursor
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        // Draw the existing path
         if (shouldDrawPath) {
             canvas.drawPath(path, paint)
             Log.d("CircleOverlayView", "Drawing path on canvas")
         }
+
+        // Draw the existing marker
         if (shouldDrawMarker) {
             canvas.drawCircle(markerX, markerY, markerRadius, circlePaint)
             canvas.drawText(markerName, markerX, markerY - markerRadius - 10f, textPaint)
             Log.d("CircleOverlayView", "Drawing marker at ($markerX, $markerY) with name: $markerName")
         }
-        if (!shouldDrawPath && !shouldDrawMarker) {
+
+        // Draw the new cursor with its name
+        if (shouldDrawCursor) {
+            canvas.drawCircle(cursorX, cursorY, cursorRadius, cursorPaint)
+            canvas.drawText(cursorName, cursorX, cursorY - cursorRadius - 10f, textPaint)
+            Log.d("CircleOverlayView", "Drawing cursor at ($cursorX, $cursorY) with name: $cursorName")
+        }
+
+        // Log when nothing is drawn
+        if (!shouldDrawPath && !shouldDrawMarker && !shouldDrawCursor) {
             Log.d("CircleOverlayView", "Nothing to draw")
         }
     }
 
+    // Existing method to show path
     fun showPath(pathData: ScreenShareComponent.PathDrawData) {
         paint.color = Color.parseColor(pathData.stroke ?: "#FF0000")
         paint.strokeWidth = pathData.strokeWidth.toFloat()
@@ -679,30 +738,49 @@ class CircleOverlayView(context: Context) : View(context) {
             }
         }
         shouldDrawPath = true
-        // Removed shouldDrawMarker = false to allow both
         invalidate()
     }
 
+    // Existing method to show marker
     fun showMarker(x: Float, y: Float, userName: String, scale: Float) {
         markerX = x
         markerY = y
         markerName = userName
-        markerRadius = 50f * scale
+        markerRadius = 20f * scale
         shouldDrawMarker = true
-        // Removed shouldDrawPath = false to allow both
         invalidate()
         Log.d("CircleOverlayView", "Showing marker for $userName at ($x, $y) with scale $scale")
     }
 
+    // Existing method to hide path
     fun hidePath() {
         shouldDrawPath = false
         invalidate()
         Log.d("CircleOverlayView", "Path hidden")
     }
 
+    // Existing method to hide marker
     fun hideMarker() {
         shouldDrawMarker = false
         invalidate()
         Log.d("CircleOverlayView", "Marker hidden")
+    }
+
+    // Updated method to show cursor with a name
+    fun showCursor(x: Float, y: Float, name: String) {
+        cursorX = x
+        cursorY = y
+        cursorName = name
+        shouldDrawCursor = true
+        invalidate()
+        Log.d("CircleOverlayView", "Showing cursor at ($x, $y) with name: $name")
+    }
+
+    // Updated method to hide cursor
+    fun hideCursor() {
+        shouldDrawCursor = false
+        cursorName = "" // Clear the name when hiding
+        invalidate()
+        Log.d("CircleOverlayView", "Cursor hidden")
     }
 }
