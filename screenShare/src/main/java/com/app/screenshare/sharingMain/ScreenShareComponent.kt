@@ -210,11 +210,11 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             RC_SCREEN_CAPTURE -> {
-                pd?.show()
+
                 Handler().postDelayed({
                     Log.e("here Checking", isCurrentAppIsVisible.toString())
                     if (isCurrentAppIsVisible) {
-                        pd?.hide()
+
                         val intent = Intent(context, MediaProjectionService::class.java)
                         intent.putExtra("resultCode", resultCode)
                         intent.putExtra("data", data)
@@ -284,10 +284,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     fun attachActivity(context: Context) {
-        if(context_activity == null){
-            this.context_activity = context
-            pd = ProgressAlertDialog(context_activity!!)
-        }
+     context_activity = null
+     this.context_activity = context
+     pd = ProgressAlertDialog(context_activity!!)
+
 
     }
 
