@@ -1,19 +1,16 @@
 package com.app.screenshare.util
 
 
+import android.app.Dialog
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.view.WindowManager
-import androidx.appcompat.app.AlertDialog
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.widget.TextView
 import com.app.screenshare.R
 
-
 class ProgressAlertDialog(context: Context) {
 
-    private val dialog: AlertDialog
+    private val dialog: Dialog
     private val messageTextView: TextView
 
     init {
@@ -23,16 +20,18 @@ class ProgressAlertDialog(context: Context) {
         // Find the message TextView
         messageTextView = view.findViewById(R.id.progressMessage)
 
-        // Build the AlertDialog
-        dialog = MaterialAlertDialogBuilder(context)
-            .setView(view)
-            .setCancelable(false)
-            .create()
+        // Create the Dialog
+        dialog = Dialog(context).apply {
+            setContentView(view)
+            setCancelable(false)
 
-        // Transparent background
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-
+            // Optional: Set window parameters
+            window?.setBackgroundDrawableResource(android.R.color.transparent)
+            window?.setLayout(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
     }
 
     fun show() {

@@ -12,7 +12,7 @@ import android.util.*
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import com.google.android.material.snackbar.Snackbar
+
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,7 +25,7 @@ import java.util.*
 object Utils {
 
     private var toast: Toast? = null
-    private var snackbar: Snackbar? = null
+
     var codeRequested = "CodeRequested"
     var draw = "draw"
     var MARKER_MOVE = "MARKER_MOVE"
@@ -137,40 +137,9 @@ object Utils {
         toast!!.show()
     }
 
-    fun showSnackBar(
-        view: View,
-        message: String,
-        actionName1: String?,
-        listener1: View.OnClickListener?,
-        duration: Int,
-    ) {
-        showSnackBar(view, message, actionName1, listener1, null, null, duration)
-    }
 
-    fun showSnackBar(
-        view: View,
-        message: String,
-        actionName1: String?,
-        listener1: View.OnClickListener?,
-        actionName2: String?,
-        listener2: View.OnClickListener?,
-        duration: Int,
-    ) {
-        if (snackbar != null) {
-            snackbar!!.dismiss()
-        }
-        snackbar = Snackbar.make(view, message, duration)
-        val snackbarView = snackbar!!.view
-        snackbarView.setBackgroundColor(Color.parseColor("#ec3338"))
-        //  snackbar.(ContextCompat.getColor(getActivity(), R.color.colorPrimary))
-        if (actionName1 != null && listener1 != null) {
-            snackbar!!.setAction(actionName1, listener1)
-        }
-        if (actionName2 != null && listener2 != null) {
-            snackbar!!.setAction(actionName2, listener2)
-        }
-        snackbar!!.show()
-    }
+
+
 
 
     fun commaSeparatedStringToArrayList(commaSeparated: String?): ArrayList<String>? {

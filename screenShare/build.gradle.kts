@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 21
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -35,7 +35,7 @@ android {
 
 dependencies {
 
-    implementation("com.google.android.material:material:1.12.0")
+
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -45,6 +45,7 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("pub.devrel:easypermissions:3.0.0")
     implementation("com.opentok.android:opentok-android-sdk:2.29.1")
+    implementation("androidx.lifecycle:lifecycle-common-jvm:2.8.7")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")

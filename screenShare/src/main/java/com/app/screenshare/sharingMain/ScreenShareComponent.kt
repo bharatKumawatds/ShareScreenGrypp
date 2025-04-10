@@ -60,6 +60,9 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     private var windowManager: WindowManager? = null
     private val drawChunks = mutableMapOf<String, MutableList<DrawEndSignal>>()
     var api_Key = ""
+    var widthScreen = 1080
+    var heightScreen = 720
+    var status_ScreenShare = 0
 
     constructor(context: Context, lifecycle1: Lifecycle,apiKey:String) : this() {
         Log.e("Calling", "Constructor")
@@ -83,6 +86,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         var isCurrentAppIsVisible = false
         var matched_session_code = ""
 
+
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID = "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
         var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDRUMDY6Mjg6MjcuNDAzNDU5OTM3WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0Mzc1OTc1MSwianRpIjoiMjU4ZGQyMmEtOWZjZC00OTAzLWExYjItMTY0MzllY2I2MThiIiwiaWF0IjoxNzQzNzU5NDUxLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0Mzc1OTQzNiwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRhTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MzUxNDUxLCJqdGkiOiJkOGZhOTc0Yi0xMGZmLTQ1ZmUtOTkyMy05MDBkYTg2NjE1NjEiLCJpYXQiOjE3NDM3NTk0NTEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNzU5NDM2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.hgJi87EKpI_V-bS4G6r2Tuc_YwesqEMJpbiOxT7d8gmA7_UUjRWsGPvpyR_xcyeyPn81oVItD3zLZEM9sBG19MaT8Nl6WV4FMvgJDkwy40yRWPDuPvo8TCat132EmSeZ0Ar8lb7hVOLP9Z0rP0ksQkpQU8KcuUzXj8QY6tJMhDVG8s3VoCqQbCYgJIuHvNYU5Pm9Zq7P973QcfKuhmYCfJ4kyVH_WdEs3ysNTJieUseAej0ceR3BqkzQsWHWhpVj8EjIpe26JZFaEeSrtb2gOpaNGOS4_vOjlc_02kZk-Yw3kzLxgcLc3bXz3Sw5Zc22ih6GZtGWPyEyrP8OB0zb_g"
@@ -94,7 +98,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     private var mediaProjectionBinder: MediaProjectionBinder? = null
     var pd: ProgressAlertDialog? = null
     private var sessionStatusListener: SessionStatusListener? = null
-    var status_ScreenShare = ""
+
 
     private val connection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -113,11 +117,14 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
     // Method to set the listener
     fun setSessionStatusListener(listener: SessionStatusListener?) {
-        this.sessionStatusListener = listener
+        if(sessionStatusListener == null){
+            this.sessionStatusListener = listener
+        }
+
     }
 
     // Notify the listener of status changes
-    private fun notifySessionStatus(status: String) {
+    private fun notifySessionStatus(status: Int) {
         sessionStatusListener?.onSessionStatusChanged(status)
         Log.d(TAG, "Session status notified: $status")
     }
@@ -144,6 +151,19 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
     fun onConfigurationChanged(newConfig: Configuration) {
         notifySessionStatus(status_ScreenShare)
+        val payload = JSONObject().apply {
+            put("brand", android.os.Build.BRAND)
+            put("model", android.os.Build.MODEL)
+            put("width", widthScreen)
+            put("height", heightScreen)
+        }
+        val signalData = JSONObject().apply {
+            put("type", "ScreenDetails")
+            put("payload", payload)
+        }
+        val signalString = signalData.toString()
+        session?.sendSignal("screenshare", signalString)
+
     }
 
     private fun addOverlayView() {
@@ -219,6 +239,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         Log.d(TAG, "Component: onResume")
         isCurrentAppIsVisible = true
         resumeSession()
+
     }
 
     override fun onPause(owner: LifecycleOwner) {
@@ -228,6 +249,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         pauseSession()
         circleOverlay?.hidePath()
         circleOverlay?.hideMarker()
+
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -262,8 +284,11 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     fun attachActivity(context: Context) {
-        this.context_activity = context
-        pd = ProgressAlertDialog(context_activity!!)
+        if(context_activity == null){
+            this.context_activity = context
+            pd = ProgressAlertDialog(context_activity!!)
+        }
+
     }
 
     fun handlePermissionResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -287,8 +312,13 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             } else {
                 addOverlayView()
             }
-            pd?.setMessage("Please Wait...")
-            pd?.show()
+            try {
+                pd?.setMessage("Please Wait...")
+                pd?.show()
+            }catch (e:Exception){
+                Log.e("here",e.toString())
+            }
+
             val apiService = RestApiBuilder().service
             CoroutineScope(Dispatchers.IO).launch {
                 if (Utils.isNetworkOnline1(context)) {
@@ -354,8 +384,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     fun stopScreenShare() {
         Log.d(TAG, "Ending Screenshare")
         cleanup()
-        notifySessionStatus("Screen Sharing Stopped")
-        status_ScreenShare = "Screen Sharing Stopped"
+        notifySessionStatus(0)
+        status_ScreenShare = 0
     }
 
     private fun requestScreenCapture() {
@@ -390,8 +420,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
             Log.d(TAG, "Publishing Screen")
             session?.publish(publisherScreen)
-            notifySessionStatus("Screen Sharing Started") // Notify here
-            status_ScreenShare = "Screen Sharing Started"
+            notifySessionStatus(1) // Notify here
+            status_ScreenShare = 1
 
             try {
                 val payload = JSONObject().apply {
@@ -443,6 +473,9 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
     fun resumeSession() {
         session?.onResume()
+        if(session != null){
+            notifySessionStatus(1)
+        }
     }
 
     fun disconnect() {
@@ -472,15 +505,15 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             Log.d(TAG, "Session Connected")
             pd?.hide()
             showGlassDialog(matched_session_code)
-            notifySessionStatus("Session Connected")
-            status_ScreenShare = "Session Connected"
+            notifySessionStatus(1)
+            status_ScreenShare = 1
         }
 
         override fun onDisconnected(p0: Session?) {
             Log.d(TAG, "Session Disconnected")
             pd?.hide()
-            notifySessionStatus("Session Disconnected")
-            status_ScreenShare = "Session Disconnected"
+            notifySessionStatus(0)
+            status_ScreenShare = 0
         }
 
         override fun onStreamReceived(p0: Session?, p1: Stream?) {
@@ -613,6 +646,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
     override fun sendFrame(imageBuffer: ByteBuffer, width: Int, height: Int) {
         customVideoCapturer?.sendFrame(imageBuffer, width, height)
+        widthScreen = width
+        heightScreen = height
     }
 
     override fun deleteService() {

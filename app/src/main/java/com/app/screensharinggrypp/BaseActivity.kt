@@ -12,8 +12,13 @@ open class BaseActivity:AppCompatActivity(), SessionStatusListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        MainApplication.getScreenShareComponent().attachActivity(this)
+
+    }
+
+    override fun onResume() {
+        super.onResume()
         MainApplication.getScreenShareComponent().setSessionStatusListener(this)
+        MainApplication.getScreenShareComponent().attachActivity(this)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -37,10 +42,8 @@ open class BaseActivity:AppCompatActivity(), SessionStatusListener {
 
     }
     // Implement the SessionStatusListener interface
-    override fun onSessionStatusChanged(status: String) {
-        runOnUiThread {
-            println("Session Status: $status")
-        }
+    override fun onSessionStatusChanged(status: Int) {
+        println("Session Status: $status")
     }
     override fun onDestroy() {
         super.onDestroy()

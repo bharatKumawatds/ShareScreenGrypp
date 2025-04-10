@@ -33,13 +33,13 @@ class MainActivity : BaseActivity() {
 
     }
 
-    override fun onSessionStatusChanged(status: String) {
+    override fun onSessionStatusChanged(status: Int) {
         super.onSessionStatusChanged(status)
-        Log.e("here MainActvity Come",status)
+        Log.e("here MainActvity Come",status.toString())
         runOnUiThread {
-          if(status == "Screen Sharing Started"){
+          if(status == 1){
               shareScreenButton.text = "Stop Screenshare"
-          }else if(status == "Screen Sharing Stopped"){
+          }else {
               shareScreenButton.text = "Start Screenshare"
           }
         }
