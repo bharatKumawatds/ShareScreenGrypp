@@ -1,11 +1,10 @@
 package com.app.screensharinggrypp
 
 
-import android.content.Intent
+
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
-import androidx.appcompat.app.AppCompatActivity
-import com.app.screenshare.sharingMain.ScreenShareComponent
 
 
 class MainActivity : BaseActivity() {
@@ -25,16 +24,27 @@ class MainActivity : BaseActivity() {
 
         shareScreenButton.setOnClickListener {
             if(shareScreenButton.text == "Start Screenshare"){
-
                 MainApplication.getScreenShareComponent().startScreenShare()
-                shareScreenButton.text = "Stop Screenshare"
             }else{
-                shareScreenButton.text = "Start Screenshare"
                 MainApplication.getScreenShareComponent().stopScreenShare()
 
             }
         }
 
     }
+
+    override fun onSessionStatusChanged(status: String) {
+        super.onSessionStatusChanged(status)
+        Log.e("here MainActvity Come",status)
+        runOnUiThread {
+          if(status == "Screen Sharing Started"){
+              shareScreenButton.text = "Stop Screenshare"
+          }else if(status == "Screen Sharing Stopped"){
+              shareScreenButton.text = "Start Screenshare"
+          }
+        }
+
+    }
+
 
 }

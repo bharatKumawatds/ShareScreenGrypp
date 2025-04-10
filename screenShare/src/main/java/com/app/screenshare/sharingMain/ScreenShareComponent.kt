@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -13,6 +14,7 @@ import android.graphics.PixelFormat
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -27,14 +29,18 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.app.screenshare.model.response.CodeRequestedResponse
-import com.app.screenshare.model.response.CreateSessionResponse
 import com.app.screenshare.model.response.SignalBaseResponse
 import com.app.screenshare.service.RestApiBuilder
 import com.app.screenshare.util.ProgressAlertDialog
 import com.app.screenshare.util.SessionCodeDialog
 import com.app.screenshare.util.Utils
 import com.google.gson.Gson
-import com.opentok.android.*
+import com.opentok.android.Connection
+import com.opentok.android.OpentokError
+import com.opentok.android.Publisher
+import com.opentok.android.PublisherKit
+import com.opentok.android.Session
+import com.opentok.android.Stream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,6 +48,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import pub.devrel.easypermissions.EasyPermissions
 import java.nio.ByteBuffer
+
 
 class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver {
     var session: Session? = null
@@ -86,6 +93,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     private var mediaProjectionServiceIsBound: Boolean = false
     private var mediaProjectionBinder: MediaProjectionBinder? = null
     var pd: ProgressAlertDialog? = null
+    private var sessionStatusListener: SessionStatusListener? = null
+    var status_ScreenShare = ""
 
     private val connection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -101,6 +110,16 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             mediaProjectionBinder?.mediaProjectionHandler = this@ScreenShareComponent
             publishScreen()
         }
+    }
+    // Method to set the listener
+    fun setSessionStatusListener(listener: SessionStatusListener?) {
+        this.sessionStatusListener = listener
+    }
+
+    // Notify the listener of status changes
+    private fun notifySessionStatus(status: String) {
+        sessionStatusListener?.onSessionStatusChanged(status)
+        Log.d(TAG, "Session status notified: $status")
     }
     // Define onTouchEvent directly (no interface needed)
     fun onTouchEvent(event: MotionEvent): Boolean {
@@ -122,6 +141,9 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             }
         }
         return false // Allow event propagation
+    }
+    fun onConfigurationChanged(newConfig: Configuration) {
+        notifySessionStatus(status_ScreenShare)
     }
 
     private fun addOverlayView() {
@@ -332,12 +354,23 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     fun stopScreenShare() {
         Log.d(TAG, "Ending Screenshare")
         cleanup()
+        notifySessionStatus("Screen Sharing Stopped")
+        status_ScreenShare = "Screen Sharing Stopped"
     }
 
     private fun requestScreenCapture() {
         val projectionManager = context?.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val intent = projectionManager.createScreenCaptureIntent()
         (context_activity as AppCompatActivity).startActivityForResult(intent, RC_SCREEN_CAPTURE)
+    }
+    val waitTimer = object : CountDownTimer(4000, 1000) {
+        override fun onTick(millisUntilFinished: Long) {
+
+        }
+
+        override fun onFinish() {
+            circleOverlay?.hideMarker()
+        }
     }
 
     private fun publishScreen() {
@@ -357,6 +390,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
             Log.d(TAG, "Publishing Screen")
             session?.publish(publisherScreen)
+            notifySessionStatus("Screen Sharing Started") // Notify here
+            status_ScreenShare = "Screen Sharing Started"
 
             try {
                 val payload = JSONObject().apply {
@@ -437,11 +472,15 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             Log.d(TAG, "Session Connected")
             pd?.hide()
             showGlassDialog(matched_session_code)
+            notifySessionStatus("Session Connected")
+            status_ScreenShare = "Session Connected"
         }
 
         override fun onDisconnected(p0: Session?) {
             Log.d(TAG, "Session Disconnected")
             pd?.hide()
+            notifySessionStatus("Session Disconnected")
+            status_ScreenShare = "Session Disconnected"
         }
 
         override fun onStreamReceived(p0: Session?, p1: Stream?) {
@@ -512,10 +551,9 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                             }
                         }
                         if(actionSignal.action == Utils.MARKER_MOVE){
-//                        var markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
-//                        Log.e("here",markerMoveSignal.toString())
                             try {
                                 val markerMoveSignal = Gson().fromJson(p2, MarkerMoveResponse::class.java)
+                                Log.e("here",markerMoveSignal.toString())
                                 val markerValue = markerMoveSignal.value
                                 circleOverlay?.showMarker(
                                     markerValue.x.toFloat(),
@@ -523,6 +561,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                                     markerValue.userName,
                                     markerValue.scale
                                 )
+                                waitTimer.cancel()
+                                waitTimer.start()
 //                            // Hide marker after 4 seconds
 //                                Handler(Looper.getMainLooper()).postDelayed({
 //                                    circleOverlay?.hideMarker()
@@ -656,6 +696,13 @@ class CircleOverlayView(context: Context) : View(context) {
         textAlign = Paint.Align.CENTER
     }
 
+    private val textPaintCursor = Paint().apply {
+        color = Color.GREEN
+        textSize = 40f
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+
     // Paint for the existing marker circle
     private val circlePaint = Paint().apply {
         color = Color.RED
@@ -707,7 +754,7 @@ class CircleOverlayView(context: Context) : View(context) {
         // Draw the new cursor with its name
         if (shouldDrawCursor) {
             canvas.drawCircle(cursorX, cursorY, cursorRadius, cursorPaint)
-            canvas.drawText(cursorName, cursorX, cursorY - cursorRadius - 10f, textPaint)
+            canvas.drawText(cursorName, cursorX, cursorY - cursorRadius - 10f, textPaintCursor)
             Log.d("CircleOverlayView", "Drawing cursor at ($cursorX, $cursorY) with name: $cursorName")
         }
 
