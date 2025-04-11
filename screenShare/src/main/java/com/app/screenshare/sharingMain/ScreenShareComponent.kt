@@ -89,7 +89,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID = "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
-        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMDRUMDY6Mjg6MjcuNDAzNDU5OTM3WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0Mzc1OTc1MSwianRpIjoiMjU4ZGQyMmEtOWZjZC00OTAzLWExYjItMTY0MzllY2I2MThiIiwiaWF0IjoxNzQzNzU5NDUxLCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0Mzc1OTQzNiwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMl9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRhTVdNd1ptUmlaVEItZmpFM05ETTFOekU0TlRZNU56ZC1iRkV4UmtadGRsVm1MM3BIZUU5cFJVeDVNMjFDZEVGbWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ2MzUxNDUxLCJqdGkiOiJkOGZhOTc0Yi0xMGZmLTQ1ZmUtOTkyMy05MDBkYTg2NjE1NjEiLCJpYXQiOjE3NDM3NTk0NTEsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQzNzU5NDM2LCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.hgJi87EKpI_V-bS4G6r2Tuc_YwesqEMJpbiOxT7d8gmA7_UUjRWsGPvpyR_xcyeyPn81oVItD3zLZEM9sBG19MaT8Nl6WV4FMvgJDkwy40yRWPDuPvo8TCat132EmSeZ0Ar8lb7hVOLP9Z0rP0ksQkpQU8KcuUzXj8QY6tJMhDVG8s3VoCqQbCYgJIuHvNYU5Pm9Zq7P973QcfKuhmYCfJ4kyVH_WdEs3ysNTJieUseAej0ceR3BqkzQsWHWhpVj8EjIpe26JZFaEeSrtb2gOpaNGOS4_vOjlc_02kZk-Yw3kzLxgcLc3bXz3Sw5Zc22ih6GZtGWPyEyrP8OB0zb_g"
+        var TOKEN = "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMTFUMDU6MjE6NDcuMTk2MjcxNjdaIiwibWV0aG9kIjoiaW50ZXJuYWwifV0sImlwUmlzayI6eyJyaXNrX2xldmVsIjowfSwidG9rZW5UeXBlIjoidmlhbSIsImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ0MzQ5MzA1LCJqdGkiOiI3OGYzNmU4Zi02ZGY3LTQyZTMtYmU2YS0xYjIwNmM2OTEwNzkiLCJpYXQiOjE3NDQzNDkwMDUsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQ0MzQ4OTkwLCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifX0sImZlZGVyYXRlZEFzc2VydGlvbnMiOnsidmlkZW8tYXBpIjpbeyJhcGlLZXkiOiI3MzY0YTg3OCIsImFwcGxpY2F0aW9uSWQiOiJmZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTAiLCJleHRyYUNvbmZpZyI6eyJ2aWRlby1hcGkiOnsiaW5pdGlhbF9sYXlvdXRfY2xhc3NfbGlzdCI6IiIsInJvbGUiOiJtb2RlcmF0b3IiLCJzY29wZSI6InNlc3Npb24uY29ubmVjdCIsInNlc3Npb25faWQiOiIyX01YNW1aRGd4WVdOaVl5MWtabVZpTFRSbE56UXRZakUwWlMweE5qZGhNV013Wm1SaVpUQi1makUzTkRNMU56RTROVFk1TnpkLWJGRXhSa1p0ZGxWbUwzcEhlRTlwUlV4NU0yMUNkRUZtZm41LSJ9fX1dfSwiYXVkIjoicG9ydHVudXMuaWRwLnZvbmFnZS5jb20iLCJleHAiOjE3NDQzNTA4MTYsImp0aSI6IjI5NDE5ZTRlLWI5YjQtNDY4OS05YzliLTE0OWI0NmM5NmE0YiIsImlhdCI6MTc0NDM0OTAxNiwiaXNzIjoiVklBTS1JQVAiLCJuYmYiOjE3NDQzNDkwMDEsInN1YiI6IjQ5NjZjY2QxLTYwZWUtNDAxMS1hMWNhLWQxYTc1NzQ2YTZjYSJ9.f7Xz38na7JPg_2BlqTYewgQIWdmM8_mYlxp5u-ETbAZowZAc1ARCbJ-rtK-2F48qiKNWNGODRm8wrxMklh7QHiA_25kpw1eJ3IEaI73FGLNZaJM_cGCkF4KpXfbmK0Ye_YJf9MvSHJlGcnNC_l18q3RG0i9RO9CFNjHH4WyvUg1r3K8TWsI-USpN0uzp504_OTAyTHLYdQDpADxnPd2DXFpO6dfHj9hsnnLS5zsFE7zQA3iFvuvqKtpIkrpEc4Nc_akLOI0Q5jjpyyJFB0jc4KtAXmZS4FgXH_-XE0T9DzOsD2kqDxz5uEWNoYJoC9hniX258f8ycapwZPro7vQgLQ"
     }
 
     private var publisherScreen: Publisher? = null
@@ -154,8 +154,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         val payload = JSONObject().apply {
             put("brand", android.os.Build.BRAND)
             put("model", android.os.Build.MODEL)
-            put("width", widthScreen)
-            put("height", heightScreen)
+            put("width", Utils.getScreenWidth())
+            put("height", Utils.getScreenHeight())
         }
         val signalData = JSONObject().apply {
             put("type", "ScreenDetails")
@@ -334,8 +334,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                             withContext(Dispatchers.Main) {
 
                                 session = Session.Builder(context, response.body()?.apiKey, response.body()?.sessionId).build()
+                                //session = Session.Builder(context, API_KEY, SESSION_ID).build()
                                 session?.setSessionListener(sessionListener)
                                 session?.setSignalListener(signalListener)
+                                //session?.connect(TOKEN)
                                 session?.connect(response.body()?.customerToken)
                                 matched_session_code = response.body()?.sessionCode ?: ""
 
@@ -427,8 +429,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 val payload = JSONObject().apply {
                     put("brand", android.os.Build.BRAND)
                     put("model", android.os.Build.MODEL)
-                    put("width", MediaProjectionService.width)
-                    put("height", MediaProjectionService.height)
+                    put("width", Utils.getScreenWidth())
+                    put("height", Utils.getScreenHeight())
                 }
                 val signalData = JSONObject().apply {
                     put("type", "ScreenDetails")
