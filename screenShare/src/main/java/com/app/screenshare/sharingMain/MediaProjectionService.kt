@@ -30,12 +30,11 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         const val TAG = "MediaProjectionService"
 
         const val FOREGROUND_SERVICE_ID = 1234
-
         const val NOTIFICATION_CHANNEL_ID = "com.app.screenshare.sharingMain.MediaProjectionService"
         const val NOTIFICATION_CHANNEL_NAME = "Grypp"
 
         const val SCREEN_CAPTURE_NAME = "screencapture"
-        const val MAX_SCREEN_AXIS = 1024
+        const val MAX_SCREEN_AXIS = 1280 // Cap resolution to avoid encoder issues
         const val VIRTUAL_DISPLAY_FLAGS =
             DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY or
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
@@ -46,183 +45,205 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
 
     private var binder: MediaProjectionBinder? = null
     private var binderIntent: Intent? = null
-
-
     private var density = 0
-
     private var imageReader: ImageReader? = null
     private var virtualDisplay: VirtualDisplay? = null
-
-    private var mediaProjection: MediaProjection ?= null
+    private var mediaProjection: MediaProjection? = null
 
     override fun onBind(intent: Intent?): IBinder? {
-        if(intent != null){
-            val data = intent.getParcelableExtra("data") ?: Intent()
-            if (data == null) {
-                println("No data found (null)")
-                // Handle the null case
-                return null
-            } else if (data is Intent && data.extras == null && data.action == null) {
-                println("Received an empty Intent: $data")
-                // Handle the empty Intent case
-                return null
-            } else {
-                println("Received valid data: $data")
-                Log.d(TAG, "On Bind")
-                binder = MediaProjectionBinder()
-                binderIntent = intent
-
-                val notification = createNotification()
-                startForeground(FOREGROUND_SERVICE_ID, notification)
-
-                // Get Media Projection
-                Log.d(TAG, "Getting Media Projection")
-                val resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED) ?: 0
-
-
-                val projectionManager =
-                    getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-
-                // Get Display
-                Log.d(TAG, "Getting Display")
-                val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                val display = windowManager.defaultDisplay
-
-                // Metrics
-                Log.d(TAG, "Getting Metrics")
-                val metrics = DisplayMetrics()
-                display.getMetrics(metrics)
-
-                // Size
-                Log.d(TAG, "Getting Size")
-                val size = Point()
-                display.getRealSize(size)
-                Log.d(TAG, "Size: ${size.x} x ${size.y}")
-                resizeDisplaySizes(size.x, size.y)
-
-
-                // Density
-                Log.d(TAG, "Getting Density")
-                density = metrics.densityDpi
-                Log.d(TAG, "Density: $density")
-
-                // Create Virtual Display
-                createVirtualDisplay()
-
-                return binder
-            }
-
-
-
-        }else{
+        if (intent == null) {
+            Log.e(TAG, "Received null intent in onBind")
             return null
         }
 
+        val data = intent.getParcelableExtra<Intent>("data")
+        if (data == null) {
+            Log.e(TAG, "No data found in intent")
+            return null
+        }
+
+        Log.d(TAG, "onBind: Received valid intent with data: $data")
+        binder = MediaProjectionBinder()
+        binderIntent = intent
+
+        // Start foreground service with notification
+        val notification = createNotification()
+        startForeground(FOREGROUND_SERVICE_ID, notification)
+
+        // Get MediaProjection
+        Log.d(TAG, "Initializing MediaProjection")
+        val resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED)
+        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        try {
+            mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            if (mediaProjection == null) {
+                Log.e(TAG, "Failed to create MediaProjection")
+                stopSelf()
+                return null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating MediaProjection: ${e.message}", e)
+            stopSelf()
+            return null
+        }
+
+        // Get display metrics
+        Log.d(TAG, "Getting display metrics")
+        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val display = windowManager.defaultDisplay
+        val metrics = DisplayMetrics()
+        display.getMetrics(metrics)
+
+        // Get real display size
+        val size = Point()
+        display.getRealSize(size)
+        Log.d(TAG, "Raw display size: ${size.x}x${size.y}")
+
+        // Adjust resolution
+        width = size.x
+        height = size.y
+        adjustResolution()
+        density = metrics.densityDpi
+        Log.d(TAG, "Adjusted resolution: ${width}x${height}, density: $density")
+
+        // Create virtual display
+        createVirtualDisplay()
+
+        return binder
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        Log.d(TAG, "On Unbind")
+        Log.d(TAG, "onUnbind")
+        cleanupResources()
         binderIntent = null
         binder = null
-
-        this.stopForeground(true)
-        this.stopSelf()
+        stopForeground(true)
+        stopSelf()
         return super.onUnbind(intent)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "On Start Command")
-
-
-        // Do not allow system to restart the service (must be started by user)
-        return START_NOT_STICKY
+        Log.d(TAG, "onStartCommand")
+        return START_NOT_STICKY // Prevent automatic restart
     }
 
-    private fun resizeDisplaySizes(newWidth: Int, newHeight: Int) {
-        var multiplication = 1.0
-
-        if (newHeight > MAX_SCREEN_AXIS) {
-            multiplication = newHeight.toDouble() / MAX_SCREEN_AXIS
-        }
-
-        if (newWidth > MAX_SCREEN_AXIS && newWidth > newHeight) {
-            multiplication = newWidth.toDouble() / MAX_SCREEN_AXIS
-        }
-
-        width = (newWidth.toDouble() / multiplication).toInt()
-        height = (newHeight.toDouble() / multiplication).toInt()
-
-        Log.d(TAG, "Display Size resized to [$width x $height]")
+    override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
+        cleanupResources()
+        super.onDestroy()
     }
 
-    val mediaProjectionCallback: MediaProjection.Callback = object : MediaProjection.Callback() {
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved")
+        binder?.mediaProjectionHandler?.deleteService()
+        cleanupResources()
+        val pid = Process.myPid()
+        Process.killProcess(pid)
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private val mediaProjectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
-            super.onStop()
-            // Release resources if necessary
-            if (mediaProjection != null) {
-                mediaProjection!!.unregisterCallback(this)
-                mediaProjection = null
-            }
+            Log.d(TAG, "MediaProjection stopped")
+            cleanupResources()
         }
 
         override fun onCapturedContentResize(width: Int, height: Int) {
-            super.onCapturedContentResize(width, height)
+            Log.d(TAG, "Captured content resized: ${width}x${height}")
         }
 
         override fun onCapturedContentVisibilityChanged(isVisible: Boolean) {
-            super.onCapturedContentVisibilityChanged(isVisible)
+            Log.d(TAG, "Captured content visibility changed: $isVisible")
         }
     }
 
+    private fun adjustResolution() {
+        // Ensure resolution is divisible by 16 (required by most hardware encoders)
+        width = (width + 15) and 0xFFFFFFF0.toInt()
+        height = (height + 15) and 0xFFFFFFF0.toInt()
+
+        // Cap resolution to avoid encoder overload
+        if (width > MAX_SCREEN_AXIS || height > MAX_SCREEN_AXIS) {
+            val aspectRatio = width.toFloat() / height
+            if (width > height) {
+                width = MAX_SCREEN_AXIS
+                height = (MAX_SCREEN_AXIS / aspectRatio).toInt()
+            } else {
+                height = MAX_SCREEN_AXIS
+                width = (MAX_SCREEN_AXIS * aspectRatio).toInt()
+            }
+            width = (width + 15) and 0xFFFFFFF0.toInt()
+            height = (height + 15) and 0xFFFFFFF0.toInt()
+        }
+        Log.d(TAG, "Final adjusted resolution: ${width}x${height}")
+    }
+
     private fun createVirtualDisplay() {
-        Log.i(TAG, "Creating Virtual Display [$width x $height]")
-
-        // Create Image Reader
-        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-        mediaProjection!!.registerCallback(mediaProjectionCallback, null);
-        // Create Virtual Display
-        virtualDisplay = mediaProjection!!.createVirtualDisplay(
-            SCREEN_CAPTURE_NAME,
-            width,
-            height,
-            density,
-            VIRTUAL_DISPLAY_FLAGS,
-            imageReader!!.surface,
-            null,
-            null
-        )
-
-        // Setup Image Available Listener
+        Log.i(TAG, "Creating VirtualDisplay [${width}x${height}]")
         try {
-            Log.d(TAG, "Setting Image Available Listener")
+            // Create ImageReader
+            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+            mediaProjection?.registerCallback(mediaProjectionCallback, null)
+
+            // Create VirtualDisplay
+            virtualDisplay = mediaProjection?.createVirtualDisplay(
+                SCREEN_CAPTURE_NAME,
+                width,
+                height,
+                density,
+                VIRTUAL_DISPLAY_FLAGS,
+                imageReader?.surface,
+                null,
+                null
+            ) ?: run {
+                Log.e(TAG, "Failed to create VirtualDisplay")
+                return
+            }
+
+            // Set ImageReader listener
             val handler = Handler(Looper.getMainLooper())
-            imageReader!!.setOnImageAvailableListener(this, handler)
-        } catch (ex: Exception) {
-            Log.e(TAG, ex.message, ex)
+            imageReader?.setOnImageAvailableListener(this, handler)
+            Log.d(TAG, "VirtualDisplay and ImageReader initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating VirtualDisplay: ${e.message}", e)
+            cleanupResources()
         }
     }
 
     override fun onImageAvailable(reader: ImageReader?) {
         val image = reader?.acquireLatestImage() ?: return
         image.use {
-            // Get Image Buffer
-            val imagePlane = image.planes[0]
-            val imageBuffer = imagePlane.buffer
+            try {
+                val imagePlane = image.planes[0]
+                val imageBuffer = imagePlane.buffer
+                val rowStride = imagePlane.rowStride
+                val pixelStride = imagePlane.pixelStride
+                val computedWidth = rowStride / pixelStride
+                Log.v(TAG, "Image available: ${computedWidth}x${image.height}, buffer size: ${imageBuffer.remaining()}")
 
-            // Compute Width (to avoid image distortion on certain devices)
-            val rowStride = imagePlane.rowStride
-            val pixelStride = imagePlane.pixelStride
-            val width = rowStride / pixelStride
-
-            // Send Image Frame Data
-            sendFrame(imageBuffer, width, image.height)
+                // Send frame to WebRTC pipeline
+                sendFrame(imageBuffer, computedWidth, image.height)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing image: ${e.message}", e)
+            }
         }
     }
 
     private fun sendFrame(imageBuffer: ByteBuffer, width: Int, height: Int) {
+        // Optional: Convert RGBA to YUV if required by encoder
+        // val yuvBuffer = convertRgbaToYuv(imageBuffer, width, height)
         binder?.mediaProjectionHandler?.sendFrame(imageBuffer, width, height)
     }
+
+    /*
+    // Placeholder for RGBA to YUV conversion (if needed)
+    private fun convertRgbaToYuv(rgbaBuffer: ByteBuffer, width: Int, height: Int): ByteBuffer {
+        // Implement using libyuv or manual conversion
+        // Example: LibYUV.ARGBToI420(rgbaBuffer, width, height, yuvBuffer, ...)
+        Log.w(TAG, "RGBA to YUV conversion not implemented")
+        return rgbaBuffer // Replace with actual conversion
+    }
+    */
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -230,18 +251,16 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
                 NOTIFICATION_CHANNEL_ID,
                 NOTIFICATION_CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_DEFAULT
-            )
-            channel.description = "Grypp Projection Service"
-
-            val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            ).apply {
+                description = "Grypp Projection Service"
+            }
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
 
     private fun createNotification(): Notification {
         createNotificationChannel()
-
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.grypp)
@@ -258,16 +277,27 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         }
     }
 
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.e("here Check","Task Removed")
-        binder?.mediaProjectionHandler?.deleteService()
-        val pid = Process.myPid()
-        Process.killProcess(pid)
-        super.onTaskRemoved(rootIntent)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
+    private fun cleanupResources() {
+        Log.d(TAG, "Cleaning up resources")
+        try {
+            imageReader?.setOnImageAvailableListener(null, null)
+            imageReader?.close()
+            imageReader = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing ImageReader: ${e.message}", e)
+        }
+        try {
+            virtualDisplay?.release()
+            virtualDisplay = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing VirtualDisplay: ${e.message}", e)
+        }
+        try {
+            mediaProjection?.unregisterCallback(mediaProjectionCallback)
+            mediaProjection?.stop()
+            mediaProjection = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping MediaProjection: ${e.message}", e)
+        }
     }
 }

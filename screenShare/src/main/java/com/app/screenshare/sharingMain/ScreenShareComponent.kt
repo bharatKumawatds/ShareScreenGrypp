@@ -63,6 +63,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     var widthScreen = 1080
     var heightScreen = 720
     var status_ScreenShare = 0
+    var firstTimeCall = 0
 
     constructor(context: Context, lifecycle1: Lifecycle,apiKey:String) : this() {
         Log.e("Calling", "Constructor")
@@ -131,38 +132,31 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     // Define onTouchEvent directly (no interface needed)
     fun onTouchEvent(event: MotionEvent): Boolean {
         val cursorName = "Local User" // You can customize this (e.g., fetch from a user profile)
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                Log.d(TAG, "Touch DOWN at (${event.x}, ${event.y})")
-                circleOverlay?.showCursor(event.x, event.y, cursorName)
+        if(mediaProjectionServiceIsBound && isCurrentAppIsVisible){
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    Log.d(TAG, "Touch DOWN at (${event.x}, ${event.y})")
+                    circleOverlay?.showCursor(event.x, event.y, cursorName)
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    Log.d(TAG, "Touch MOVE at (${event.x}, ${event.y})")
+                    circleOverlay?.showCursor(event.x, event.y, cursorName)
+                }
+                MotionEvent.ACTION_UP -> {
+                    Log.d(TAG, "Touch UP at (${event.x}, ${event.y})")
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        circleOverlay?.hideCursor()
+                    }, 2000) // Hide cursor after 2 seconds
+                }
             }
-            MotionEvent.ACTION_MOVE -> {
-                Log.d(TAG, "Touch MOVE at (${event.x}, ${event.y})")
-                circleOverlay?.showCursor(event.x, event.y, cursorName)
-            }
-            MotionEvent.ACTION_UP -> {
-                Log.d(TAG, "Touch UP at (${event.x}, ${event.y})")
-                Handler(Looper.getMainLooper()).postDelayed({
-                    circleOverlay?.hideCursor()
-                }, 2000) // Hide cursor after 2 seconds
-            }
+            return false // Allow event propagation
         }
-        return false // Allow event propagation
+       return true
+
     }
     fun onConfigurationChanged(newConfig: Configuration) {
         notifySessionStatus(status_ScreenShare)
-        val payload = JSONObject().apply {
-            put("brand", android.os.Build.BRAND)
-            put("model", android.os.Build.MODEL)
-            put("width", Utils.getScreenWidth())
-            put("height", Utils.getScreenHeight())
-        }
-        val signalData = JSONObject().apply {
-            put("type", "ScreenDetails")
-            put("payload", payload)
-        }
-        val signalString = signalData.toString()
-        session?.sendSignal("screenshare", signalString)
+        firstTimeCall = 0
 
     }
 
@@ -174,9 +168,23 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            // Handle display cutouts (notches) for API 28+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+            // Ensure overlay covers system bars (status and navigation)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            }
+        }
+
         try {
             windowManager?.addView(circleOverlay, params)
             Log.d(TAG, "CircleOverlayView added to WindowManager")
@@ -425,23 +433,6 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             notifySessionStatus(1) // Notify here
             status_ScreenShare = 1
 
-            try {
-                val payload = JSONObject().apply {
-                    put("brand", android.os.Build.BRAND)
-                    put("model", android.os.Build.MODEL)
-                    put("width", Utils.getScreenWidth())
-                    put("height", Utils.getScreenHeight())
-                }
-                val signalData = JSONObject().apply {
-                    put("type", "ScreenDetails")
-                    put("payload", payload)
-                }
-                val signalString = signalData.toString()
-                session?.sendSignal("screenshare", signalString)
-                Log.d(TAG, "Sent signal: $signalString")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error creating ScreenDetails signal: ${e.message}", e)
-            }
         }
     }
 
@@ -486,6 +477,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     fun cleanup() {
+        firstTimeCall = 0
         disconnect()
         if (mediaProjectionServiceIsBound) {
             context?.unbindService(connection)
@@ -648,6 +640,27 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
     override fun sendFrame(imageBuffer: ByteBuffer, width: Int, height: Int) {
         customVideoCapturer?.sendFrame(imageBuffer, width, height)
+        if(firstTimeCall == 0){
+            try {
+                val payload = JSONObject().apply {
+                    put("brand", android.os.Build.BRAND)
+                    put("model", android.os.Build.MODEL)
+                    put("width", width)
+                    put("height", height)
+                }
+                val signalData = JSONObject().apply {
+                    put("type", "ScreenDetails")
+                    put("payload", payload)
+                }
+                val signalString = signalData.toString()
+                session?.sendSignal("screenshare", signalString)
+                firstTimeCall++
+                Log.d(TAG, "Sent signal: $signalString")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating ScreenDetails signal: ${e.message}", e)
+            }
+        }
+
         widthScreen = width
         heightScreen = height
     }
