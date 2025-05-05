@@ -1,3 +1,9 @@
+Minimum Requirements
+compileSdkVersion - 24
+javaVersion - 17
+
+
+
 Steps To Integrate Screen Sharing Using Grypp
 
 Step - 1 Add this in root level build.gradle file 
