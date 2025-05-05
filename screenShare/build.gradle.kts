@@ -50,6 +50,7 @@ dependencies {
     implementation("com.opentok.android:opentok-android-sdk:2.29.1")
     implementation("androidx.lifecycle:lifecycle-common-jvm:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.cardview:cardview:1.0.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
