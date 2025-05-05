@@ -377,7 +377,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 *permissions
             )
         ) {
-            initializeComponent()
+            Handler().postDelayed({
+                initializeComponent()
+            },200)
+
         }
     }
 
@@ -593,7 +596,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 // Schedule new redaction update
                 pendingRedactionUpdate = Runnable {
                     val lowerCaseUrl = url.toLowerCase()
-                    if (lowerCaseUrl.contains("stripe") || lowerCaseUrl.contains("payment") || lowerCaseUrl.contains("checkout")) {
+                    if (sensitiveTags.any { lowerCaseUrl.contains(it.lowercase()) }) {
                         // Redact entire WebView
                         redactionManager?.redact(view)
                         Log.d(TAG, "Redacting entire WebView due to payment-related URL: $url")
@@ -619,7 +622,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 // Schedule JavaScript injection for non-payment URLs
                 pendingRedactionUpdate = Runnable {
                     val lowerCaseUrl = url.toLowerCase()
-                    if (!(lowerCaseUrl.contains("stripe") || lowerCaseUrl.contains("payment") || lowerCaseUrl.contains("checkout"))) {
+                    if (!sensitiveTags.any { lowerCaseUrl.contains(it.lowercase()) }) {
                         view.evaluateJavascript(
                             """
                         function detectSensitiveFields() {
@@ -710,7 +713,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             override fun onTouch(v: View?, event: MotionEvent?): Boolean {
                 isWebViewVisible = true
                 val url = webView.url?.toLowerCase() ?: ""
-                if ((url.contains("stripe") || url.contains("payment") || url.contains("checkout"))) {
+                if (sensitiveTags.any { url.contains(it.lowercase()) }) {
                     redactionManager?.redact(webView)
                 }
                 return false
@@ -720,7 +723,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         // Update redactions on WebView scroll
         webView.setOnScrollChangeListener { _, _, _, _, _ ->
             val url = webView.url?.toLowerCase() ?: ""
-            if (!(url.contains("stripe") || url.contains("payment") || url.contains("checkout"))) {
+            if (!sensitiveTags.any { url.contains(it.lowercase()) }) {
                 redactionManager?.clear() // Clear previous WebView redactions
                 webView.evaluateJavascript("detectSensitiveFields();", null)
                 Log.d(TAG, "WebView scrolled, updating redactions")

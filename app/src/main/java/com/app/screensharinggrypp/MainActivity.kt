@@ -2,6 +2,7 @@ package com.app.screensharinggrypp
 
 
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.os.Handler
 import android.provider.Settings
 import android.util.Log
 import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import com.app.screenshare.sharingMain.MediaProjectionService
 import com.app.screenshare.sharingMain.ScreenShareComponent
 import com.app.screenshare.sharingMain.ScreenShareComponent.Companion
@@ -46,16 +48,26 @@ class MainActivity : BaseActivity() {
     }
 
     private fun requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivityForResult(
-                intent,
-                OVERLAY_PERMISSION_REQUEST_CODE
-            )
-        }
+        AlertDialog.Builder(this)
+            .setTitle("Overlay Permission Required")
+            .setMessage("This app needs permission to draw over other apps to enable screen annotations. Please allow this permission in the next screen.")
+            .setPositiveButton("Allow") { _, _ ->
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${this.packageName}")
+                )
+                (this as AppCompatActivity).startActivityForResult(
+                    intent,
+                    OVERLAY_PERMISSION_REQUEST_CODE
+                )
+                Log.d(ScreenShareComponent.TAG, "Overlay permission requested")
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+                Log.d(ScreenShareComponent.TAG, "Overlay permission request canceled by user")
+            }
+            .setCancelable(false)
+            .show()
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
