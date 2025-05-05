@@ -30,6 +30,9 @@ object Utils {
     var draw = "draw"
     var MARKER_MOVE = "MARKER_MOVE"
 
+    var originalWith:Int=0
+    var originalHeight:Int=0
+
     fun getOSName(): String {
         var osName = ""
         try {

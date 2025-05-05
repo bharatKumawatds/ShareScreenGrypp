@@ -2,9 +2,21 @@ package com.app.screensharinggrypp
 
 
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.provider.Settings
 import android.util.Log
 import android.widget.Button
+import com.app.screenshare.sharingMain.MediaProjectionService
+import com.app.screenshare.sharingMain.ScreenShareComponent
+import com.app.screenshare.sharingMain.ScreenShareComponent.Companion
+import com.app.screenshare.sharingMain.ScreenShareComponent.Companion.RC_OVERLAY_PERMISSION
+import com.app.screenshare.sharingMain.ScreenShareComponent.Companion.RC_SCREEN_CAPTURE
+import com.app.screenshare.sharingMain.ScreenShareComponent.Companion.isCurrentAppIsVisible
 
 
 class MainActivity : BaseActivity() {
@@ -12,39 +24,65 @@ class MainActivity : BaseActivity() {
         const val TAG = "MainActivity"
     }
 
-
-    private lateinit var shareScreenButton: Button
+    val OVERLAY_PERMISSION_REQUEST_CODE: Int = 100
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        if (checkOverlayPermission()) {
+            startOverlayService()
+        } else {
+            requestOverlayPermission()
+        }
 
-        shareScreenButton = findViewById(R.id.sharescreen_button)
 
-        shareScreenButton.setOnClickListener {
-            if(shareScreenButton.text == "Start Screenshare"){
-                MainApplication.getScreenShareComponent().startScreenShare()
-            }else{
-                MainApplication.getScreenShareComponent().stopScreenShare()
+    }
+    private fun checkOverlayPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(this)
+        }
+        return true // Permission not required below Marshmallow
+    }
 
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivityForResult(
+                intent,
+                OVERLAY_PERMISSION_REQUEST_CODE
+            )
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+
+            OVERLAY_PERMISSION_REQUEST_CODE -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(
+                        this
+                    )
+                ) {
+                    Log.d(ScreenShareComponent.TAG, "Overlay permission granted")
+                    startOverlayService()
+                } else {
+                    Log.e(ScreenShareComponent.TAG, "Overlay permission denied")
+                }
             }
         }
-
     }
 
-    override fun onSessionStatusChanged(status: Int) {
-        super.onSessionStatusChanged(status)
-        Log.e("here MainActvity Come",status.toString())
-        runOnUiThread {
-          if(status == 1){
-              shareScreenButton.text = "Stop Screenshare"
-          }else {
-              shareScreenButton.text = "Start Screenshare"
-          }
-        }
-
+    private fun startOverlayService() {
+        val intent = Intent(
+            this,
+            GlobalActionBarService::class.java
+        )
+        startService(intent)
     }
+
 
 
 }

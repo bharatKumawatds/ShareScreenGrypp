@@ -7,8 +7,13 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Point
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
@@ -23,6 +28,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import com.app.screenshare.R
+import com.app.screenshare.util.Utils
 import java.nio.ByteBuffer
 
 class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
@@ -41,6 +47,9 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
 
         var width = 240
         var height = 320
+        var originalWidth = 0
+        var originalHeight = 0
+        var keyboardHeight = 0 // Estimated keyboard height
     }
 
     private var binder: MediaProjectionBinder? = null
@@ -49,6 +58,10 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
     private var imageReader: ImageReader? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaProjection: MediaProjection? = null
+    private val redactionPaint = Paint().apply {
+        color = Color.TRANSPARENT // Solid black to ensure text is obscured
+        style = Paint.Style.FILL
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         if (intent == null) {
@@ -98,6 +111,8 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         val size = Point()
         display.getRealSize(size)
         Log.d(TAG, "Raw display size: ${size.x}x${size.y}")
+        originalWidth = size.x
+        originalHeight = size.y
 
         // Adjust resolution
         width = size.x
@@ -105,6 +120,12 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         adjustResolution()
         density = metrics.densityDpi
         Log.d(TAG, "Adjusted resolution: ${width}x${height}, density: $density")
+
+        Log.d(TAG, "Adjusted resolution: ${width}x${height}, density: $density, original: ${originalWidth}x${originalHeight}")
+
+        // Estimate keyboard height (this is a rough approximation; adjust based on device)
+        //keyboardHeight = (originalHeight * 0.3f).toInt() // Example: assume 30% of screen height
+        Log.d(TAG, "Estimated keyboard height: $keyboardHeight")
 
         // Create virtual display
         createVirtualDisplay()
@@ -174,6 +195,8 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
             }
             width = (width + 15) and 0xFFFFFFF0.toInt()
             height = (height + 15) and 0xFFFFFFF0.toInt()
+            Utils.originalWith= width
+            Utils.originalHeight= height
         }
         Log.d(TAG, "Final adjusted resolution: ${width}x${height}")
     }
@@ -221,13 +244,108 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
                 val computedWidth = rowStride / pixelStride
                 Log.v(TAG, "Image available: ${computedWidth}x${image.height}, buffer size: ${imageBuffer.remaining()}")
 
-                // Send frame to WebRTC pipeline
-                sendFrame(imageBuffer, computedWidth, image.height)
+                // Create a Bitmap from the image buffer
+                val bitmap = Bitmap.createBitmap(computedWidth, image.height, Bitmap.Config.ARGB_8888)
+                bitmap.copyPixelsFromBuffer(imageBuffer)
+
+                // Apply redactions to the Bitmap with scaling and keyboard area
+                val redactedBitmap = applyRedactions(bitmap, computedWidth, image.height)
+
+                // Convert the redacted Bitmap back to a ByteBuffer
+                val redactedBuffer = ByteBuffer.allocateDirect(redactedBitmap.byteCount)
+                redactedBitmap.copyPixelsToBuffer(redactedBuffer)
+                redactedBuffer.rewind()
+
+                // Send the redacted frame
+                sendFrame(redactedBuffer, computedWidth, image.height)
+
+                // Recycle the Bitmap
+                redactedBitmap.recycle()
+                bitmap.recycle()
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing image: ${e.message}", e)
             }
         }
     }
+    private fun applyRedactions(bitmap: Bitmap, bitmapWidth: Int, bitmapHeight: Int): Bitmap {
+        // Create a new Bitmap and Canvas for software rendering
+        val redactedBitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(redactedBitmap)
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+
+        val redactionRegions = binder?.mediaProjectionHandler?.getRedactionManager()?.getRedactionRegions() ?: emptyList()
+        val scaleX = bitmapWidth.toFloat() / originalWidth.toFloat()
+        val scaleY = bitmapHeight.toFloat() / originalHeight.toFloat()
+        Log.d(TAG, "Scaling factors: scaleX=$scaleX, scaleY=$scaleY, original=${originalWidth}x${originalHeight}, bitmap=${bitmapWidth}x${bitmapHeight}")
+
+        // Redact sensitive regions
+        redactionRegions.forEach { rect ->
+            val scaledRect = Rect(
+                (rect.left * scaleX).toInt(),
+                (rect.top * scaleY).toInt(),
+                (rect.right * scaleX).toInt(),
+                (rect.bottom * scaleY).toInt()
+            )
+
+            // Extract the region to blur
+            val regionBitmap = Bitmap.createBitmap(
+                redactedBitmap,
+                scaledRect.left,
+                scaledRect.top,
+                scaledRect.width(),
+                scaledRect.height()
+            )
+
+            // Apply manual Gaussian blur
+            val blurredRegion = BlurUtils.gaussianBlur(regionBitmap, 10) // Adjust radius for desired effect
+
+            // Draw the blurred region back onto the canvas
+            canvas.drawBitmap(blurredRegion, scaledRect.left.toFloat(), scaledRect.top.toFloat(), null)
+
+            // Overlay a solid black rectangle to ensure text is unreadable
+            canvas.drawRect(scaledRect, redactionPaint)
+
+            Log.d(TAG, "Applied redaction at ${scaledRect.left},${scaledRect.top} with size ${scaledRect.width()}x${scaledRect.height()}")
+            regionBitmap.recycle()
+            blurredRegion.recycle()
+        }
+
+        // Check if WebView is visible
+        val isWebViewVisible = binder?.mediaProjectionHandler?.isWebViewVisible() ?: false
+        Log.d(TAG, "Is WebView visible? $isWebViewVisible")
+
+        // Redact keyboard area only if WebView is not visible
+        if (!isWebViewVisible && keyboardHeight > 0 && bitmapHeight > keyboardHeight) {
+            val keyboardRect = Rect(0, bitmapHeight - (keyboardHeight * scaleY).toInt(), bitmapWidth, bitmapHeight)
+
+            // Extract the keyboard region to blur
+            val keyboardBitmap = Bitmap.createBitmap(
+                redactedBitmap,
+                keyboardRect.left,
+                keyboardRect.top,
+                keyboardRect.width(),
+                keyboardRect.height()
+            )
+
+            // Apply manual Gaussian blur
+            val blurredKeyboard = BlurUtils.gaussianBlur(keyboardBitmap, 10)
+
+            // Draw the blurred region back onto the canvas
+            canvas.drawBitmap(blurredKeyboard, keyboardRect.left.toFloat(), keyboardRect.top.toFloat(), null)
+
+            // Overlay a solid black rectangle
+            canvas.drawRect(keyboardRect, redactionPaint)
+
+            Log.d(TAG, "Applied keyboard redaction at ${keyboardRect.top} with height ${keyboardRect.height()}")
+            keyboardBitmap.recycle()
+            blurredKeyboard.recycle()
+        } else if (isWebViewVisible) {
+            Log.d(TAG, "Skipped keyboard redaction because WebView is visible")
+        }
+
+        return redactedBitmap
+    }
+
 
     private fun sendFrame(imageBuffer: ByteBuffer, width: Int, height: Int) {
         // Optional: Convert RGBA to YUV if required by encoder

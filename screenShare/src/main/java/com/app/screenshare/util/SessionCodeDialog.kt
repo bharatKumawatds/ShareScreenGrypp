@@ -23,13 +23,18 @@ class SessionCodeDialog(
     private val cancelText: String = "Cancel",
     private val confirmText: String = "Confirm",
     private val onConfirmClick: (() -> Unit)? = null,
-    private val onCancelClick: (() -> Unit)? = null
+    private val onCancelClick: (() -> Unit)? = null,
+//    private val customView: Int
 ) : Dialog(context) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-        setContentView(R.layout.custom_dialog_layout)
+      /*  if(customView!=null){
+            setContentView(customView)
+        }else {*/
+            setContentView(R.layout.custom_dialog_layout)
+//        }
 
         // Set dialog properties for glass effect
         setCancelable(false)
@@ -42,13 +47,13 @@ class SessionCodeDialog(
         val titleTextView = findViewById<TextView>(R.id.dialog_title)
         val messageTextView = findViewById<TextView>(R.id.dialog_message)
         val cancelButton = findViewById<Button>(R.id.cancel_button)
-        val confirmButton = findViewById<Button>(R.id.confirm_button)
+//        val confirmButton = findViewById<Button>(R.id.confirm_button)
 
         // Set content
         titleTextView.text = title
         messageTextView.text = message
         cancelButton.text = cancelText
-        confirmButton.text = confirmText
+//        confirmButton.text = confirmText
 
         // Set button click listeners
         cancelButton.setOnClickListener {
@@ -57,11 +62,11 @@ class SessionCodeDialog(
 
         }
 
-        confirmButton.setOnClickListener {
+        /*confirmButton.setOnClickListener {
             onConfirmClick?.invoke()
             dismiss()
 
-        }
+        }*/
 
         // Set dialog dimensions
         val width = (context.resources.displayMetrics.widthPixels * 0.85).toInt()

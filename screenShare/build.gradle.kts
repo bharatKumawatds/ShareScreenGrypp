@@ -11,6 +11,8 @@ android {
     defaultConfig {
         minSdk = 21
 
+        renderscriptTargetApi = 19
+        renderscriptSupportModeEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -31,6 +33,7 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
 }
 
 dependencies {
@@ -46,6 +49,8 @@ dependencies {
     implementation("pub.devrel:easypermissions:3.0.0")
     implementation("com.opentok.android:opentok-android-sdk:2.29.1")
     implementation("androidx.lifecycle:lifecycle-common-jvm:2.8.7")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
