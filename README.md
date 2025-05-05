@@ -1,4 +1,5 @@
 Minimum Requirements
+
 compileSdkVersion - 24
 javaVersion - 17
 
