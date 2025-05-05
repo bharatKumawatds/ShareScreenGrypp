@@ -1,12 +1,15 @@
 Steps To Integrate Screen Sharing Using Grypp
+Step - 1 Add this in root level build.gradle file 
+![Screenshot 2025-05-05 at 5 47 04 PM](https://github.com/user-attachments/assets/a026b419-a7f6-4e47-a5f7-d8a4e9032532)
 
-Step - 1 implementation "com.github.bharatKumawatds:ShareScreenGrypp:v1.0.0" in app level build.gradle file
 
-Step - 2 in Manifest define config Changes in Mainfest
+Step - 2 implementation "com.github.bharatKumawatds:ShareScreenGrypp:v1.0.0" in app level build.gradle file
+
+Step - 3 in Manifest define config Changes in Mainfest
 
 ![Screenshot 2025-05-05 at 3 38 06 PM](https://github.com/user-attachments/assets/c1778d7e-db48-44f3-aa39-0f50632def82)
 
-Step - 3 Create a Application Class and Intlize ScreenShareComponent
+Step - 4 Create a Application Class and Intlize ScreenShareComponent
 
 *like this*
 ![Screenshot 2025-05-05 at 5 21 26 PM](https://github.com/user-attachments/assets/2a4bc08b-3fbd-48ff-a19a-1d79398343af)
@@ -34,7 +37,7 @@ class MainApplication : Application() {
 }
 
 
-Step - 4 Create Base Actvity
+Step - 5 Create Base Actvity
 Note - All Activity Must be inherit with BaseActivity
 
 *like this*
@@ -117,7 +120,7 @@ open class BaseActivity:AppCompatActivity(), SessionStatusListener {
     }
 }
 
-Step - 5 Create a overlay button(Can Also Customize this overlay button)
+Step - 6 Create a overlay button(Can Also Customize this overlay button)
 Note - Mention the service in mainfest like this 
 <service
             android:name=".GlobalActionBarService"
@@ -422,7 +425,7 @@ class GlobalActionBarService : Service() {
     }
 } 
 
-Step - 6 Create an AppLifeCycle Observer to hide or show overlay button 
+Step - 7 Create an AppLifeCycle Observer to hide or show overlay button 
 
 
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -440,7 +443,7 @@ class AppLifecycleObserver(private val globalService: GlobalActionBarService?) :
     }
 }
 
-Step - 7 Ask Permission For Overlay and start GlobalActionBarService 
+Step - 8 Ask Permission For Overlay and start GlobalActionBarService 
 
 
 import android.app.AlertDialog
