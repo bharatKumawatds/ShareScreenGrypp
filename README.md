@@ -2,7 +2,8 @@ Steps To Integrate Screen Sharing Using Grypp
 
 Step - 1 implementation "com.github.bharatKumawatds:ShareScreenGrypp:v1.0.0" in app level build.gradle file
 
-Step - 2 in Manifest define config Changes in Mainfest 
+Step - 2 in Manifest define config Changes in Mainfest
+
 ![Screenshot 2025-05-05 at 3 38 06 PM](https://github.com/user-attachments/assets/c1778d7e-db48-44f3-aa39-0f50632def82)
 
 Step - 3 Create a Application Class and Intlize ScreenShareComponent
