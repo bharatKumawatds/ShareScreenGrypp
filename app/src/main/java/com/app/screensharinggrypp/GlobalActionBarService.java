@@ -290,9 +290,7 @@ public class GlobalActionBarService extends Service {
 
     public void hideOverlayButton() {
         removeDialog();
-        if (MainApplication.Companion.getScreenShareComponent().getStatus_ScreenShare() != 0) {
-            MainApplication.Companion.getScreenShareComponent().stopScreenShare();
-        }
+
         if (overlayButton != null && overlayButton.getWindowToken() != null) {
             overlayButton.setVisibility(View.GONE);
         }
