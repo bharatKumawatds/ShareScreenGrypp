@@ -59,7 +59,7 @@ open class BaseActivity:AppCompatActivity(), SessionStatusListener {
         MainApplication.getScreenShareComponent().clearRedactions()
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         MainApplication.getScreenShareComponent().handlePermissionResult(requestCode, permissions, grantResults)
     }
