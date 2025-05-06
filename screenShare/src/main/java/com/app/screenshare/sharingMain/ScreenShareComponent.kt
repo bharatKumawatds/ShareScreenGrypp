@@ -325,6 +325,22 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         }
 
     }
+    fun PauseSession(){
+        isWebViewVisible = false
+        Log.d(TAG, "Component: onPause")
+        isCurrentAppIsVisible = false
+        pauseSession()
+        circleOverlay?.hidePath()
+        circleOverlay?.hideMarker()
+        keyboardHeightListener?.let {
+            (context_activity as? AppCompatActivity)?.findViewById<ViewGroup>(android.R.id.content)?.viewTreeObserver?.removeOnGlobalLayoutListener(it)
+            keyboardHeightListener = null
+        }
+    }
+    fun ResumeSession(){
+        isCurrentAppIsVisible = true
+        resumeSession()
+    }
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
@@ -339,11 +355,20 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     private fun requestPermissions() {
-        val perms = arrayOf(
-            android.Manifest.permission.CAMERA,
-            android.Manifest.permission.RECORD_AUDIO,
-            android.Manifest.permission.FOREGROUND_SERVICE
-        )
+        var perms: Array<String>
+        perms = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            arrayOf(
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO,
+            )
+        }else{
+            arrayOf(
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO,
+                android.Manifest.permission.FOREGROUND_SERVICE
+            )
+        }
+
 
         if (EasyPermissions.hasPermissions(context_activity!!, *perms)) {
             initializeComponent()
@@ -507,18 +532,23 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     private fun detectSensitiveViews(view: View, found: MutableList<View>, webViews: MutableList<WebView>) {
+        fun normalizeText(text: String): String {
+            return text.lowercase()
+                .replace(Regex("[^a-z0-9]"), "") // Remove all non-alphanumeric characters
+        }
         if (view is EditText) {
             // Existing EditText logic
             val inputType = view.inputType
-            val hint = view.hint?.toString()?.lowercase() ?: ""
-            val tag = view.tag?.toString()?.lowercase() ?: ""
+            val hint = normalizeText(view.hint?.toString()?.lowercase() ?: "")
+            val tag = normalizeText(view.tag?.toString()?.lowercase() ?: "")
             val isSensitive = when {
                 (inputType and android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 -> true
                 (inputType and android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) != 0 -> true
-                hint.contains("password",true) || hint.contains("pass",true) -> true
-                hint.contains("credit",true) || hint.contains("card",true) -> true
-                tag.contains("password",true) || tag.contains("pass",true) -> true
-                tag.contains("credit",true) || tag.contains("card",true) -> true
+                hint.contains("password") || hint.contains("pass") -> true
+                hint.contains("credit") || hint.contains("card") || hint.contains("debit",true) -> true
+                tag.contains("password") || tag.contains("pass") -> true
+                tag.contains("credit") || tag.contains("card")|| tag.contains("debit",true) -> true
+                tag.contains("OTP",true)||hint.contains("OTP",true)  -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
                 else -> false
@@ -530,14 +560,15 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         }
         if (view is TextView) {
             val inputType = view.inputType
-            val hint = view.text?.toString()?.lowercase() ?: ""
-            val tag = view.tag?.toString()?.lowercase() ?: ""
+            val hint = normalizeText(view.text?.toString()?.lowercase() ?: "")
+            val tag = normalizeText(view.tag?.toString()?.lowercase() ?: "")
 
             val isSensitive = when {
-                hint.contains("password",true) || hint.contains("pass",true) -> true
-                hint.contains("credit",true) || hint.contains("card",true) -> true
-                tag.contains("password",true) || tag.contains("pass",true) -> true
-                tag.contains("credit",true) || tag.contains("card",true) -> true
+                hint.contains("password") || hint.contains("pass") -> true
+                hint.contains("credit") || hint.contains("card") || hint.contains("debit",true) -> true
+                tag.contains("password") || tag.contains("pass") -> true
+                tag.contains("credit") || tag.contains("card")|| tag.contains("debit",true) -> true
+                tag.contains("OTP",true)||hint.contains("OTP",true)  -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
                 //(inputType and android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS) != 0 || hint.contains("email") || tag.contains("email") -> false
