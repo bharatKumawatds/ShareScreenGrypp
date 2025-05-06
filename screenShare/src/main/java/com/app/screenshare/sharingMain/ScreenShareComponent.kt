@@ -515,6 +515,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             val isSensitive = when {
                 (inputType and android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 -> true
                 (inputType and android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) != 0 -> true
+                hint.contains("password",true) || hint.contains("pass",true) -> true
+                hint.contains("credit",true) || hint.contains("card",true) -> true
+                tag.contains("password",true) || tag.contains("pass",true) -> true
+                tag.contains("credit",true) || tag.contains("card",true) -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
                 else -> false
@@ -530,6 +534,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             val tag = view.tag?.toString()?.lowercase() ?: ""
 
             val isSensitive = when {
+                hint.contains("password",true) || hint.contains("pass",true) -> true
+                hint.contains("credit",true) || hint.contains("card",true) -> true
+                tag.contains("password",true) || tag.contains("pass",true) -> true
+                tag.contains("credit",true) || tag.contains("card",true) -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
                 //(inputType and android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS) != 0 || hint.contains("email") || tag.contains("email") -> false
@@ -753,13 +761,74 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
                     Log.d(TAG, "RecyclerView scrolled, updating redactions")
+                    // Re-detect sensitive views in visible items
+                    redactionManager?.clear() // Clear previous redactions
+                    val sensitiveViews = mutableListOf<View>()
+                    val webViews = mutableListOf<WebView>()
+                    detectSensitiveViewsInRecyclerView(recyclerView, sensitiveViews, webViews)
+                    sensitiveViews.forEach { redactionManager?.redact(it) }
+                    webViews.forEach { setupWebViewRedaction(it) }
                     redactionManager?.updateAllPositions()
+                }
+            })
+            // Also detect sensitive views when the adapter data changes
+            view.adapter?.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+                override fun onChanged() {
+                    Log.d(TAG, "RecyclerView adapter data changed, updating redactions")
+                    redactionManager?.clear() // Clear previous redactions
+                    val sensitiveViews = mutableListOf<View>()
+                    val webViews = mutableListOf<WebView>()
+                    detectSensitiveViewsInRecyclerView(view, sensitiveViews, webViews)
+                    sensitiveViews.forEach { redactionManager?.redact(it) }
+                    webViews.forEach { setupWebViewRedaction(it) }
+                    redactionManager?.updateAllPositions()
+                }
+
+                override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                    onChanged() // Treat insertions as full data change for simplicity
+                }
+
+                override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+                    onChanged() // Treat removals as full data change
                 }
             })
         }
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
                 setupScrollViewListeners(view.getChildAt(i))
+            }
+        }
+    }
+    private fun detectSensitiveViewsInRecyclerView(
+        recyclerView: RecyclerView,
+        sensitiveViews: MutableList<View>,
+        webViews: MutableList<WebView>
+    ) {
+        // Iterate over visible view holders
+        val layoutManager = recyclerView.layoutManager
+        if (layoutManager != null) {
+            val firstVisiblePosition = when (layoutManager) {
+                is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findFirstVisibleItemPosition()
+                is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findFirstVisibleItemPosition()
+                else -> 0
+            }
+            val lastVisiblePosition = when (layoutManager) {
+                is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findLastVisibleItemPosition()
+                is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findLastVisibleItemPosition()
+                else -> recyclerView.childCount - 1
+            }
+
+            for (position in firstVisiblePosition..lastVisiblePosition) {
+                val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
+                if (viewHolder != null) {
+                    // Check the view holder's item view for sensitive views
+                    detectSensitiveViews(viewHolder.itemView, sensitiveViews, webViews)
+                }
+            }
+        } else {
+            // Fallback: check all child views
+            for (i in 0 until recyclerView.childCount) {
+                detectSensitiveViews(recyclerView.getChildAt(i), sensitiveViews, webViews)
             }
         }
     }
