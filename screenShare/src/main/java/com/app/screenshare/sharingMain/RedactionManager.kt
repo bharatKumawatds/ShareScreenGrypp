@@ -46,10 +46,34 @@ class RedactionManager {
         return redactionRegions.toList()
     }
 
+//    private fun updateRedactionRegions() {
+//        redactionRegions.clear()
+//        sensitiveViews.forEach { (view, rect) ->
+//            if (view.width > 0 && view.height > 0 && view.isShown) {
+//                val location = IntArray(2)
+//                view.getLocationOnScreen(location)
+//                rect.set(
+//                    location[0],
+//                    location[1],
+//                    location[0] + view.width,
+//                    location[1] + view.height
+//                )
+//                if (rect.width() > 0 && rect.height() > 0) {
+//                    redactionRegions.add(Rect(rect))
+//                    Log.d(TAG, "Updated redaction region for view at (${rect.left}, ${rect.top}) with size ${rect.width()}x${rect.height()}")
+//                } else {
+//                    Log.w(TAG, "Skipping redaction for view with invalid size: ${view.width}x${view.height}")
+//                }
+//            } else {
+//                Log.w(TAG, "Skipping redaction for invisible or zero-sized view: $view")
+//            }
+//        }
+//    }
+
     private fun updateRedactionRegions() {
         redactionRegions.clear()
         sensitiveViews.forEach { (view, rect) ->
-            if (view.width > 0 && view.height > 0 && view.isShown) {
+            if (view.isShown && view.width > 0 && view.height > 0) {
                 val location = IntArray(2)
                 view.getLocationOnScreen(location)
                 rect.set(

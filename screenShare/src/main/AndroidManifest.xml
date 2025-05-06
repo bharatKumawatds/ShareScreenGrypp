@@ -18,7 +18,6 @@
         <service android:name=".sharingMain.MediaProjectionService"
             android:foregroundServiceType="mediaProjection"
             android:exported="true"
-            android:configChanges="orientation|screenSize"
             >
 
         </service>

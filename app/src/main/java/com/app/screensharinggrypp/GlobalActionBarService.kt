@@ -119,7 +119,7 @@ class GlobalActionBarService : Service() {
                 getScreenShareComponent().startScreenShare(session)
             } else {
                 // Show end session dialog
-                getScreenShareComponent().PauseSession()
+                getScreenShareComponent().pauseSession()
                 showEndSessionDialog()
             }
         }
@@ -232,10 +232,11 @@ class GlobalActionBarService : Service() {
         noButton.text = "No"
         noButton.setTextColor(-0x1)
         noButton.setBackgroundResource(R.drawable.round_btn_red)
-        noButton.setPadding(40, 10, 10, 20)
+        buttonParams.setMargins(10, 10, 10, 10) // 10dp margins
+        yesButton.layoutParams = buttonParams
         noButton.setOnClickListener { v: View? ->
             run {
-                getScreenShareComponent().ResumeSession()
+                getScreenShareComponent().resumeSession()
                 removeDialog()
             }
         }

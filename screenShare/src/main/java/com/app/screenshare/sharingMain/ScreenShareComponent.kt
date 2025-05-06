@@ -325,22 +325,6 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         }
 
     }
-    fun PauseSession(){
-        isWebViewVisible = false
-        Log.d(TAG, "Component: onPause")
-        isCurrentAppIsVisible = false
-        pauseSession()
-        circleOverlay?.hidePath()
-        circleOverlay?.hideMarker()
-        keyboardHeightListener?.let {
-            (context_activity as? AppCompatActivity)?.findViewById<ViewGroup>(android.R.id.content)?.viewTreeObserver?.removeOnGlobalLayoutListener(it)
-            keyboardHeightListener = null
-        }
-    }
-    fun ResumeSession(){
-        isCurrentAppIsVisible = true
-        resumeSession()
-    }
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
@@ -355,20 +339,11 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
     }
 
     private fun requestPermissions() {
-        var perms: Array<String>
-        perms = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-            arrayOf(
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-            )
-        }else{
-            arrayOf(
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-                android.Manifest.permission.FOREGROUND_SERVICE
-            )
-        }
-
+        val perms = arrayOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.FOREGROUND_SERVICE
+        )
 
         if (EasyPermissions.hasPermissions(context_activity!!, *perms)) {
             initializeComponent()
@@ -546,8 +521,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
                 (inputType and android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) != 0 -> true
                 hint.contains("password") || hint.contains("pass") -> true
                 hint.contains("credit") || hint.contains("card") || hint.contains("debit",true) -> true
+                hint.contains("cvv") || hint.contains("cvc")  -> true
                 tag.contains("password") || tag.contains("pass") -> true
                 tag.contains("credit") || tag.contains("card")|| tag.contains("debit",true) -> true
+                tag.contains("cvv") || tag.contains("cvc")  -> true
                 tag.contains("OTP",true)||hint.contains("OTP",true)  -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
@@ -566,8 +543,10 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             val isSensitive = when {
                 hint.contains("password") || hint.contains("pass") -> true
                 hint.contains("credit") || hint.contains("card") || hint.contains("debit",true) -> true
+                hint.contains("cvv") || hint.contains("cvc")  -> true
                 tag.contains("password") || tag.contains("pass") -> true
                 tag.contains("credit") || tag.contains("card")|| tag.contains("debit",true) -> true
+                tag.contains("cvv") || tag.contains("cvc")  -> true
                 tag.contains("OTP",true)||hint.contains("OTP",true)  -> true
                 sensitiveTags.any { hint.contains(it.lowercase()) } -> true // Use sensitiveTags
                 sensitiveTags.any { tag.contains(it.lowercase()) } -> true // Use sensitiveTags
@@ -835,33 +814,56 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         sensitiveViews: MutableList<View>,
         webViews: MutableList<WebView>
     ) {
-        // Iterate over visible view holders
-        val layoutManager = recyclerView.layoutManager
-        if (layoutManager != null) {
-            val firstVisiblePosition = when (layoutManager) {
-                is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findFirstVisibleItemPosition()
-                is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findFirstVisibleItemPosition()
-                else -> 0
-            }
-            val lastVisiblePosition = when (layoutManager) {
-                is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findLastVisibleItemPosition()
-                is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findLastVisibleItemPosition()
-                else -> recyclerView.childCount - 1
-            }
+        // Debounce redaction updates
+        val handler = Handler(Looper.getMainLooper())
+        handler.removeCallbacksAndMessages(null) // Cancel previous updates
+        handler.postDelayed({
+            // Clear existing redactions
+            redactionManager?.clear()
 
-            for (position in firstVisiblePosition..lastVisiblePosition) {
-                val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
-                if (viewHolder != null) {
-                    // Check the view holder's item view for sensitive views
-                    detectSensitiveViews(viewHolder.itemView, sensitiveViews, webViews)
+            // Iterate over visible view holders
+            val layoutManager = recyclerView.layoutManager
+            if (layoutManager != null) {
+                val firstVisiblePosition = when (layoutManager) {
+                    is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findFirstVisibleItemPosition()
+                    is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findFirstVisibleItemPosition()
+                    else -> 0
                 }
+                val lastVisiblePosition = when (layoutManager) {
+                    is androidx.recyclerview.widget.LinearLayoutManager -> layoutManager.findLastVisibleItemPosition()
+                    is androidx.recyclerview.widget.GridLayoutManager -> layoutManager.findLastVisibleItemPosition()
+                    else -> recyclerView.childCount - 1
+                }
+
+                for (position in firstVisiblePosition..lastVisiblePosition) {
+                    val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
+                    if (viewHolder != null && viewHolder.itemView.isShown) {
+                        // Check the view holder's item view for sensitive views
+                        detectSensitiveViews(viewHolder.itemView, sensitiveViews, webViews)
+                    }
+                }
+
+                // Apply redactions
+                sensitiveViews.forEach { redactionManager?.redact(it) }
+                webViews.forEach { setupWebViewRedaction(it) }
+                redactionManager?.updateAllPositions()
+
+                Log.d(TAG, "Redacted ${sensitiveViews.size} sensitive views and ${webViews.size} WebViews in RecyclerView")
+            } else {
+                // Fallback: check all child views
+                for (i in 0 until recyclerView.childCount) {
+                    val child = recyclerView.getChildAt(i)
+                    if (child.isShown) {
+                        detectSensitiveViews(child, sensitiveViews, webViews)
+                    }
+                }
+                sensitiveViews.forEach { redactionManager?.redact(it) }
+                webViews.forEach { setupWebViewRedaction(it) }
+                redactionManager?.updateAllPositions()
+
+                Log.d(TAG, "Redacted ${sensitiveViews.size} sensitive views and ${webViews.size} WebViews in RecyclerView (fallback)")
             }
-        } else {
-            // Fallback: check all child views
-            for (i in 0 until recyclerView.childCount) {
-                detectSensitiveViews(recyclerView.getChildAt(i), sensitiveViews, webViews)
-            }
-        }
+        }, 100) // Debounce by 100ms
     }
 
     private fun setupKeyboardHeightDetection() {

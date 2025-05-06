@@ -267,11 +267,93 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
             }
         }
     }
+//    private fun applyRedactions(bitmap: Bitmap, bitmapWidth: Int, bitmapHeight: Int): Bitmap {
+//        // Create a new Bitmap and Canvas for software rendering
+//        val redactedBitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
+//        val canvas = Canvas(redactedBitmap)
+//        canvas.drawBitmap(bitmap, 0f, 0f, null)
+//
+//        val redactionRegions = binder?.mediaProjectionHandler?.getRedactionManager()?.getRedactionRegions() ?: emptyList()
+//        val scaleX = bitmapWidth.toFloat() / originalWidth.toFloat()
+//        val scaleY = bitmapHeight.toFloat() / originalHeight.toFloat()
+//        Log.d(TAG, "Scaling factors: scaleX=$scaleX, scaleY=$scaleY, original=${originalWidth}x${originalHeight}, bitmap=${bitmapWidth}x${bitmapHeight}")
+//
+//        // Redact sensitive regions
+//        redactionRegions.forEach { rect ->
+//            val scaledRect = Rect(
+//                (rect.left * scaleX).toInt(),
+//                (rect.top * scaleY).toInt(),
+//                (rect.right * scaleX).toInt(),
+//                (rect.bottom * scaleY).toInt()
+//            )
+//
+//            // Extract the region to blur
+//            val regionBitmap = Bitmap.createBitmap(
+//                redactedBitmap,
+//                scaledRect.left,
+//                scaledRect.top,
+//                scaledRect.width(),
+//                scaledRect.height()
+//            )
+//
+//            // Apply manual Gaussian blur
+//            val blurredRegion = BlurUtils.gaussianBlur(regionBitmap, 10) // Adjust radius for desired effect
+//
+//            // Draw the blurred region back onto the canvas
+//            canvas.drawBitmap(blurredRegion, scaledRect.left.toFloat(), scaledRect.top.toFloat(), null)
+//
+//            // Overlay a solid black rectangle to ensure text is unreadable
+//            canvas.drawRect(scaledRect, redactionPaint)
+//
+//            Log.d(TAG, "Applied redaction at ${scaledRect.left},${scaledRect.top} with size ${scaledRect.width()}x${scaledRect.height()}")
+//            regionBitmap.recycle()
+//            blurredRegion.recycle()
+//        }
+//
+//        // Check if WebView is visible
+//        val isWebViewVisible = binder?.mediaProjectionHandler?.isWebViewVisible() ?: false
+//        Log.d(TAG, "Is WebView visible? $isWebViewVisible")
+//
+//        // Redact keyboard area only if WebView is not visible
+//        if (!isWebViewVisible && keyboardHeight > 0 && bitmapHeight > keyboardHeight) {
+//            val keyboardRect = Rect(0, bitmapHeight - (keyboardHeight * scaleY).toInt(), bitmapWidth, bitmapHeight)
+//
+//            // Extract the keyboard region to blur
+//            val keyboardBitmap = Bitmap.createBitmap(
+//                redactedBitmap,
+//                keyboardRect.left,
+//                keyboardRect.top,
+//                keyboardRect.width(),
+//                keyboardRect.height()
+//            )
+//
+//            // Apply manual Gaussian blur
+//            val blurredKeyboard = BlurUtils.gaussianBlur(keyboardBitmap, 10)
+//
+//            // Draw the blurred region back onto the canvas
+//            canvas.drawBitmap(blurredKeyboard, keyboardRect.left.toFloat(), keyboardRect.top.toFloat(), null)
+//
+//            // Overlay a solid black rectangle
+//            canvas.drawRect(keyboardRect, redactionPaint)
+//
+//            Log.d(TAG, "Applied keyboard redaction at ${keyboardRect.top} with height ${keyboardRect.height()}")
+//            keyboardBitmap.recycle()
+//            blurredKeyboard.recycle()
+//        } else if (isWebViewVisible) {
+//            Log.d(TAG, "Skipped keyboard redaction because WebView is visible")
+//        }
+//
+//        return redactedBitmap
+//    }
+
     private fun applyRedactions(bitmap: Bitmap, bitmapWidth: Int, bitmapHeight: Int): Bitmap {
         // Create a new Bitmap and Canvas for software rendering
         val redactedBitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(redactedBitmap)
         canvas.drawBitmap(bitmap, 0f, 0f, null)
+
+        // Update redaction regions to ensure they are current
+        binder?.mediaProjectionHandler?.getRedactionManager()?.updateAllPositions()
 
         val redactionRegions = binder?.mediaProjectionHandler?.getRedactionManager()?.getRedactionRegions() ?: emptyList()
         val scaleX = bitmapWidth.toFloat() / originalWidth.toFloat()
@@ -287,27 +369,40 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
                 (rect.bottom * scaleY).toInt()
             )
 
-            // Extract the region to blur
-            val regionBitmap = Bitmap.createBitmap(
-                redactedBitmap,
-                scaledRect.left,
-                scaledRect.top,
-                scaledRect.width(),
-                scaledRect.height()
-            )
+            // Validate scaledRect bounds
+            if (scaledRect.left < 0 || scaledRect.top < 0 ||
+                scaledRect.right > bitmapWidth || scaledRect.bottom > bitmapHeight ||
+                scaledRect.width() <= 0 || scaledRect.height() <= 0
+            ) {
+                Log.w(TAG, "Skipping invalid redaction region: $scaledRect")
+                return@forEach
+            }
 
-            // Apply manual Gaussian blur
-            val blurredRegion = BlurUtils.gaussianBlur(regionBitmap, 10) // Adjust radius for desired effect
+            try {
+                // Extract the region to blur
+                val regionBitmap = Bitmap.createBitmap(
+                    redactedBitmap,
+                    scaledRect.left,
+                    scaledRect.top,
+                    scaledRect.width(),
+                    scaledRect.height()
+                )
 
-            // Draw the blurred region back onto the canvas
-            canvas.drawBitmap(blurredRegion, scaledRect.left.toFloat(), scaledRect.top.toFloat(), null)
+                // Apply manual Gaussian blur
+                val blurredRegion = BlurUtils.gaussianBlur(regionBitmap, 10) // Adjust radius for desired effect
 
-            // Overlay a solid black rectangle to ensure text is unreadable
-            canvas.drawRect(scaledRect, redactionPaint)
+                // Draw the blurred region back onto the canvas
+                canvas.drawBitmap(blurredRegion, scaledRect.left.toFloat(), scaledRect.top.toFloat(), null)
 
-            Log.d(TAG, "Applied redaction at ${scaledRect.left},${scaledRect.top} with size ${scaledRect.width()}x${scaledRect.height()}")
-            regionBitmap.recycle()
-            blurredRegion.recycle()
+                // Overlay a solid black rectangle to ensure text is unreadable
+                canvas.drawRect(scaledRect, redactionPaint)
+
+                Log.d(TAG, "Applied redaction at ${scaledRect.left},${scaledRect.top} with size ${scaledRect.width()}x${scaledRect.height()}")
+                regionBitmap.recycle()
+                blurredRegion.recycle()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error applying redaction for region $scaledRect: ${e.message}", e)
+            }
         }
 
         // Check if WebView is visible
@@ -315,30 +410,41 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         Log.d(TAG, "Is WebView visible? $isWebViewVisible")
 
         // Redact keyboard area only if WebView is not visible
-        if (!isWebViewVisible && keyboardHeight > 0 && bitmapHeight > keyboardHeight) {
+        if (keyboardHeight > 0 && bitmapHeight > keyboardHeight) {
             val keyboardRect = Rect(0, bitmapHeight - (keyboardHeight * scaleY).toInt(), bitmapWidth, bitmapHeight)
 
-            // Extract the keyboard region to blur
-            val keyboardBitmap = Bitmap.createBitmap(
-                redactedBitmap,
-                keyboardRect.left,
-                keyboardRect.top,
-                keyboardRect.width(),
-                keyboardRect.height()
-            )
+            // Validate keyboardRect bounds
+            if (keyboardRect.width() > 0 && keyboardRect.height() > 0 &&
+                keyboardRect.top >= 0 && keyboardRect.bottom <= bitmapHeight
+            ) {
+                try {
+                    // Extract the keyboard region to blur
+                    val keyboardBitmap = Bitmap.createBitmap(
+                        redactedBitmap,
+                        keyboardRect.left,
+                        keyboardRect.top,
+                        keyboardRect.width(),
+                        keyboardRect.height()
+                    )
 
-            // Apply manual Gaussian blur
-            val blurredKeyboard = BlurUtils.gaussianBlur(keyboardBitmap, 10)
+                    // Apply manual Gaussian blur
+                    val blurredKeyboard = BlurUtils.gaussianBlur(keyboardBitmap, 10)
 
-            // Draw the blurred region back onto the canvas
-            canvas.drawBitmap(blurredKeyboard, keyboardRect.left.toFloat(), keyboardRect.top.toFloat(), null)
+                    // Draw the blurred region back onto the canvas
+                    canvas.drawBitmap(blurredKeyboard, keyboardRect.left.toFloat(), keyboardRect.top.toFloat(), null)
 
-            // Overlay a solid black rectangle
-            canvas.drawRect(keyboardRect, redactionPaint)
+                    // Overlay a solid black rectangle
+                    canvas.drawRect(keyboardRect, redactionPaint)
 
-            Log.d(TAG, "Applied keyboard redaction at ${keyboardRect.top} with height ${keyboardRect.height()}")
-            keyboardBitmap.recycle()
-            blurredKeyboard.recycle()
+                    Log.d(TAG, "Applied keyboard redaction at ${keyboardRect.top} with height ${keyboardRect.height()}")
+                    keyboardBitmap.recycle()
+                    blurredKeyboard.recycle()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error applying keyboard redaction: ${e.message}", e)
+                }
+            } else {
+                Log.w(TAG, "Skipping invalid keyboard redaction region: $keyboardRect")
+            }
         } else if (isWebViewVisible) {
             Log.d(TAG, "Skipped keyboard redaction because WebView is visible")
         }
