@@ -255,6 +255,7 @@ class GlobalActionBarService : Service() {
                 getScreenShareComponent().startScreenShare(session)
             } else {
                 // Show end session dialog
+                getScreenShareComponent().pauseSession()
                 showEndSessionDialog()
             }
         }
@@ -367,8 +368,14 @@ class GlobalActionBarService : Service() {
         noButton.text = "No"
         noButton.setTextColor(-0x1)
         noButton.setBackgroundResource(R.drawable.round_btn_red)
-        noButton.setPadding(40, 10, 10, 20)
-        noButton.setOnClickListener { v: View? -> removeDialog() }
+        buttonParams.setMargins(10, 10, 10, 10) // 10dp margins
+        yesButton.layoutParams = buttonParams
+        noButton.setOnClickListener { v: View? ->
+            run {
+                getScreenShareComponent().resumeSession()
+                removeDialog()
+            }
+        }
         noButton.layoutParams = buttonParams
         buttonLayout.addView(noButton)
 
@@ -432,8 +439,7 @@ class GlobalActionBarService : Service() {
             overlayButton!!.visibility = View.VISIBLE
         }
     }
-} 
-
+}
 Step - 7 Create an AppLifeCycle Observer to hide or show overlay button 
 
 
