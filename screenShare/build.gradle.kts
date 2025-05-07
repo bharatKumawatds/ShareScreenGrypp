@@ -47,6 +47,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
     implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("pub.devrel:easypermissions:3.0.0")
+    implementation("androidx.cardview:cardview:1.0.0")
     implementation("com.opentok.android:opentok-android-sdk:2.29.1")
     implementation("androidx.lifecycle:lifecycle-common-jvm:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
