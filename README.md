@@ -12,7 +12,7 @@ Step - 1 Add this in root level build.gradle file
 ![Screenshot 2025-05-05 at 5 47 04 PM](https://github.com/user-attachments/assets/a026b419-a7f6-4e47-a5f7-d8a4e9032532)
 
 
-Step - 2 implementation "com.github.bharatKumawatds:ShareScreenGrypp:v1.0.0" in app level build.gradle file
+Step - 2 implementation "com.github.bharatKumawatds:ShareScreenGrypp:1.0" in app level build.gradle file
 
 Step - 3 in Manifest define config Changes in Mainfest
 
