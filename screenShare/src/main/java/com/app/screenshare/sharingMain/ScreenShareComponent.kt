@@ -115,9 +115,9 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
 
         var API_KEY = "fd81acbc-dfeb-4e74-b14e-167a1c0fdbe0"
         var SESSION_ID =
-            "2_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDM1NzE4NTY5Nzd-bFExRkZtdlVmL3pHeE9pRUx5M21CdEFmfn5-"
+            "1_MX5mZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTB-fjE3NDkyOTI1ODY2Mjl-SmxoaW9lVWFNekNJOHNrbi9pS3pmUWp5fn5-"
         var TOKEN =
-            "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjoyNTM3NjAxOTQwODY1MTMyNzYyMjQyNTY0MjU2NjUxMTAzNjIzODIiLCJ0eXAiOiJKV1QiLCJ4NXUiOiJodHRwczovL2FudWJpcy1jZXJ0cy1jMS11c3cyLnByb2QudjEudm9uYWdlbmV0d29ya3MubmV0L3YxL2NlcnRzLzhkMWM3Yzg4YjdiMjBlZGYyODkzYjk3YWVkYzAzNmY3In0.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDQtMTFUMDU6MjE6NDcuMTk2MjcxNjdaIiwibWV0aG9kIjoiaW50ZXJuYWwifV0sImlwUmlzayI6eyJyaXNrX2xldmVsIjowfSwidG9rZW5UeXBlIjoidmlhbSIsImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzQ0MzQ5MzA1LCJqdGkiOiI3OGYzNmU4Zi02ZGY3LTQyZTMtYmU2YS0xYjIwNmM2OTEwNzkiLCJpYXQiOjE3NDQzNDkwMDUsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQ0MzQ4OTkwLCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifX0sImZlZGVyYXRlZEFzc2VydGlvbnMiOnsidmlkZW8tYXBpIjpbeyJhcGlLZXkiOiI3MzY0YTg3OCIsImFwcGxpY2F0aW9uSWQiOiJmZDgxYWNiYy1kZmViLTRlNzQtYjE0ZS0xNjdhMWMwZmRiZTAiLCJleHRyYUNvbmZpZyI6eyJ2aWRlby1hcGkiOnsiaW5pdGlhbF9sYXlvdXRfY2xhc3NfbGlzdCI6IiIsInJvbGUiOiJtb2RlcmF0b3IiLCJzY29wZSI6InNlc3Npb24uY29ubmVjdCIsInNlc3Npb25faWQiOiIyX01YNW1aRGd4WVdOaVl5MWtabVZpTFRSbE56UXRZakUwWlMweE5qZGhNV013Wm1SaVpUQi1makUzTkRNMU56RTROVFk1TnpkLWJGRXhSa1p0ZGxWbUwzcEhlRTlwUlV4NU0yMUNkRUZtZm41LSJ9fX1dfSwiYXVkIjoicG9ydHVudXMuaWRwLnZvbmFnZS5jb20iLCJleHAiOjE3NDQzNTA4MTYsImp0aSI6IjI5NDE5ZTRlLWI5YjQtNDY4OS05YzliLTE0OWI0NmM5NmE0YiIsImlhdCI6MTc0NDM0OTAxNiwiaXNzIjoiVklBTS1JQVAiLCJuYmYiOjE3NDQzNDkwMDEsInN1YiI6IjQ5NjZjY2QxLTYwZWUtNDAxMS1hMWNhLWQxYTc1NzQ2YTZjYSJ9.f7Xz38na7JPg_2BlqTYewgQIWdmM8_mYlxp5u-ETbAZowZAc1ARCbJ-rtK-2F48qiKNWNGODRm8wrxMklh7QHiA_25kpw1eJ3IEaI73FGLNZaJM_cGCkF4KpXfbmK0Ye_YJf9MvSHJlGcnNC_l18q3RG0i9RO9CFNjHH4WyvUg1r3K8TWsI-USpN0uzp504_OTAyTHLYdQDpADxnPd2DXFpO6dfHj9hsnnLS5zsFE7zQA3iFvuvqKtpIkrpEc4Nc_akLOI0Q5jjpyyJFB0jc4KtAXmZS4FgXH_-XE0T9DzOsD2kqDxz5uEWNoYJoC9hniX258f8ycapwZPro7vQgLQ"
+            "eyJhbGciOiJSUzI1NiIsImprdSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvandrcyIsImtpZCI6IkNOPVZvbmFnZSAxdmFwaWd3IEludGVybmFsIENBOjo4MzIzMzMyODYzMzA5MzYxMTg1NzUxOTIzMTM4NTk5MDg0ODkxMCIsInR5cCI6IkpXVCIsIng1dSI6Imh0dHBzOi8vYW51YmlzLWNlcnRzLWMxLXVzdzIucHJvZC52MS52b25hZ2VuZXR3b3Jrcy5uZXQvdjEvY2VydHMvYjg5NDQyNmMxYjg0NDhlNGM2ZDhmNjQ2MDdjNWEyOWEifQ.eyJwcmluY2lwYWwiOnsiYWNsIjp7InBhdGhzIjp7Ii8qKiI6e319fSwidmlhbUlkIjp7ImVtYWlsIjoiYXNoaXNoLnRhbndhckBkb3RzcXVhcmVzLmNvbSIsImdpdmVuX25hbWUiOiJBc2hpc2giLCJmYW1pbHlfbmFtZSI6IlRhbndhciIsInBob25lX251bWJlciI6IjkxODA5NDAwMDE3NyIsInBob25lX251bWJlcl9jb3VudHJ5IjoiSU4iLCJvcmdhbml6YXRpb25faWQiOiI5ODE0MTRhOS0yZmQ0LTRkMTgtYjM3Yi00OGUxZDljYTAwN2IiLCJhdXRoZW50aWNhdGlvbk1ldGhvZHMiOlt7ImNvbXBsZXRlZF9hdCI6IjIwMjUtMDYtMDdUMTA6MzU6MDEuNjI3NjgzNjg4WiIsIm1ldGhvZCI6ImludGVybmFsIn1dLCJpcFJpc2siOnsicmlza19sZXZlbCI6MH0sInRva2VuVHlwZSI6InZpYW0iLCJhdWQiOiJwb3J0dW51cy5pZHAudm9uYWdlLmNvbSIsImV4cCI6MTc0OTI5Mjg5NiwianRpIjoiNTI1ZmYzZDMtODNlYi00YWMxLWE4ZTctNGNmODM0MzFjMDA2IiwiaWF0IjoxNzQ5MjkyNTk2LCJpc3MiOiJWSUFNLUlBUCIsIm5iZiI6MTc0OTI5MjU4MSwic3ViIjoiNDk2NmNjZDEtNjBlZS00MDExLWExY2EtZDFhNzU3NDZhNmNhIn19LCJmZWRlcmF0ZWRBc3NlcnRpb25zIjp7InZpZGVvLWFwaSI6W3siYXBpS2V5IjoiNzM2NGE4NzgiLCJhcHBsaWNhdGlvbklkIjoiZmQ4MWFjYmMtZGZlYi00ZTc0LWIxNGUtMTY3YTFjMGZkYmUwIiwiZXh0cmFDb25maWciOnsidmlkZW8tYXBpIjp7ImluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3QiOiIiLCJyb2xlIjoibW9kZXJhdG9yIiwic2NvcGUiOiJzZXNzaW9uLmNvbm5lY3QiLCJzZXNzaW9uX2lkIjoiMV9NWDVtWkRneFlXTmlZeTFrWm1WaUxUUmxOelF0WWpFMFpTMHhOamRoTVdNd1ptUmlaVEItZmpFM05Ea3lPVEkxT0RZMk1qbC1TbXhvYVc5bFZXRk5la05KT0hOcmJpOXBTM3BtVVdwNWZuNS0ifX19XX0sImF1ZCI6InBvcnR1bnVzLmlkcC52b25hZ2UuY29tIiwiZXhwIjoxNzUxODg0NTk2LCJqdGkiOiJmZGFkZDFiNS0wMThmLTRjOTgtOWJlMy04MDNiMWYyNjMyNTgiLCJpYXQiOjE3NDkyOTI1OTYsImlzcyI6IlZJQU0tSUFQIiwibmJmIjoxNzQ5MjkyNTgxLCJzdWIiOiI0OTY2Y2NkMS02MGVlLTQwMTEtYTFjYS1kMWE3NTc0NmE2Y2EifQ.OTLfmcaSgkLH_QngOuVLVfe_J-ERkZqOF1u0VCEwcH6g6y_7d_9GWeRDy4wDiA0jeOVL5HyHaUQAnPm_CULIo7ntXpvk9JW9rYfaFRxcTrFh8O8Ro04G4qQTyX1AFD5UH4AjzqQHtAyO8UocLX0rrcmzuhMtMNTJflyRnj8ze2yUkzQtO0haatiUIF3GqdS1SGjoIIHLujT26tZ4sxokd_pqGj9zM0cbJLVUpDj7LzPXctLgjQHShQ0GTdrPdyL519-nOl-ZqnnmfrrLzw5T68z_06eqxx53jbZp0I9VaIHr6xpfpf-sUVhMiGtVGRbUah9_MDRmEd0HjkBdWrWyZA"
     }
 
     private var publisherScreen: Publisher? = null
@@ -186,8 +186,14 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         return true
 
     }
+    var orientationStatus = 0
 
     fun onConfigurationChanged(newConfig: Configuration) {
+        if(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE){
+            orientationStatus = 1
+        }else{
+            orientationStatus = 0
+        }
         notifySessionStatus(status_ScreenShare)
         firstTimeCall = 0
         redactionManager?.updateAllPositions()
@@ -931,7 +937,7 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             publisherScreen = Publisher.Builder(context)
                 .capturer(customVideoCapturer)
                 .audioTrack(false)
-                .frameRate(Publisher.CameraCaptureFrameRate.FPS_30) // Increase frame rate
+                .frameRate(Publisher.CameraCaptureFrameRate.FPS_15) // Increase frame rate
                 .build()
             publisherScreen!!.publisherVideoType =
                 PublisherKit.PublisherKitVideoType.PublisherKitVideoTypeScreen
@@ -1225,11 +1231,18 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
         customVideoCapturer?.sendFrame(imageBuffer, width, height)
         if (firstTimeCall == 0) {
             try {
+                if(orientationStatus == 1){
+                    widthScreen = height
+                    heightScreen = width
+                }else{
+                    widthScreen = width
+                    heightScreen = height
+                }
                 val payload = JSONObject().apply {
                     put("brand", android.os.Build.BRAND)
                     put("model", android.os.Build.MODEL)
-                    put("width", width)
-                    put("height", height)
+                    put("width", widthScreen)
+                    put("height", heightScreen)
                 }
                 val signalData = JSONObject().apply {
                     put("type", "ScreenDetails")
@@ -1244,8 +1257,8 @@ class ScreenShareComponent() : MediaProjectionHandler, DefaultLifecycleObserver 
             }
         }
 
-        widthScreen = width
-        heightScreen = height
+//        widthScreen = width
+//        heightScreen = height
     }
 
     override fun deleteService() {

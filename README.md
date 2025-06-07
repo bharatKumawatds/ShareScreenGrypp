@@ -11,12 +11,26 @@ Steps To Integrate Screen Sharing Using Grypp
 Step - 1 Add this in root level build.gradle file 
 ![Screenshot 2025-05-05 at 5 47 04 PM](https://github.com/user-attachments/assets/a026b419-a7f6-4e47-a5f7-d8a4e9032532)
 
+mavenCentral()
+maven { url 'https://jitpack.io' }
+
 
 Step - 2 implementation "com.github.bharatKumawatds:ShareScreenGrypp:11.0.0" in app level build.gradle file
 
 Step - 3 in Manifest define config Changes in Mainfest
 
 ![Screenshot 2025-05-05 at 3 38 06 PM](https://github.com/user-attachments/assets/c1778d7e-db48-44f3-aa39-0f50632def82)
+<activity
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize"
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
 Step - 4 Create a Application Class and Intlize ScreenShareComponent
 

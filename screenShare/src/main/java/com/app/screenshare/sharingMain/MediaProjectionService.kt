@@ -183,18 +183,32 @@ class MediaProjectionService : Service(), ImageReader.OnImageAvailableListener {
         width = (width + 15) and 0xFFFFFFF0.toInt()
         height = (height + 15) and 0xFFFFFFF0.toInt()
 
-        // Cap resolution to avoid encoder overload
-        if (width > MAX_SCREEN_AXIS || height > MAX_SCREEN_AXIS) {
-            val aspectRatio = width.toFloat() / height
-            if (width > height) {
+//        // Cap resolution to avoid encoder overload
+//        if (width > MAX_SCREEN_AXIS || height > MAX_SCREEN_AXIS) {
+//            val aspectRatio = width.toFloat() / height
+//            if (width > height) {
+//                width = MAX_SCREEN_AXIS
+//                height = (MAX_SCREEN_AXIS / aspectRatio).toInt()
+//            } else {
+//                height = MAX_SCREEN_AXIS
+//                width = (MAX_SCREEN_AXIS * aspectRatio).toInt()
+//            }
+//            width = (width + 15) and 0xFFFFFFF0.toInt()
+//            height = (height + 15) and 0xFFFFFFF0.toInt()
+//            Utils.originalWith= width
+//            Utils.originalHeight= height
+//        }
+        val aspectRatio = originalWidth.toFloat() / originalHeight.toFloat()
+
+// Limit width and height proportionally
+        if (originalWidth > MAX_SCREEN_AXIS || originalHeight > MAX_SCREEN_AXIS) {
+            if (originalWidth > originalHeight) {
                 width = MAX_SCREEN_AXIS
                 height = (MAX_SCREEN_AXIS / aspectRatio).toInt()
             } else {
                 height = MAX_SCREEN_AXIS
                 width = (MAX_SCREEN_AXIS * aspectRatio).toInt()
             }
-            width = (width + 15) and 0xFFFFFFF0.toInt()
-            height = (height + 15) and 0xFFFFFFF0.toInt()
             Utils.originalWith= width
             Utils.originalHeight= height
         }

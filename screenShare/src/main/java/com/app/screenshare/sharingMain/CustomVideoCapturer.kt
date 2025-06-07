@@ -47,7 +47,7 @@ class CustomVideoCapturer(private val activity: Activity) : BaseVideoCapturer() 
         val captureSettings = CaptureSettings()
         captureSettings.width = width
         captureSettings.height = height
-        captureSettings.fps = 30
+        captureSettings.fps = 15
         captureSettings.expectedDelay = 0
 
         return captureSettings
